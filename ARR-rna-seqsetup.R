@@ -11,6 +11,9 @@ library(ggplot2)
 library(colorspace)
 library(ggrepel)
 library(VennDiagram)
+library(scales)
+
+setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-R workshop")
 
 gene_associations <- read.delim("gene_association_final.txt", comment.char = "!", header = FALSE, as.is = TRUE) 
 colnames(gene_associations) <- c("DB", "DB_Object_ID", "DB_Object_Symbol", "Qualifier", "GO_ID",
@@ -26,15 +29,15 @@ colnames(gene_associations) <- c("DB", "DB_Object_ID", "DB_Object_Symbol", "Qual
 gene_associations <- gene_associations[,c(2,3,5,7,9,14)]
 
 
-
-# Go through every unique gene and pull out any GO_ID associated with the given gene then give
-gene_GO <- lapply(unique(gene_associations$DB_Object_ID), function(x){tmp <- gene_associations %>% filter(DB_Object_ID == x)
-return(tmp$GO_ID)})
-names(gene_GO) <- unique(gene_associations$DB_Object_ID) 
-#Save it
-gene_GO_save <- sapply(gene_GO, function(x){paste(x, collapse = ", ")}) 
-gene_GO_save <- as.data.frame( gene_GO_save) # Making a dataframe
-write.table(gene_GO_save, file = "TAIR_to_GO.delim", sep = "\t", quote = FALSE, col.names = FALSE) 
+##Make Gene-Go from scratch
+# # Go through every unique gene and pull out any GO_ID associated with the given gene then give
+# gene_GO <- lapply(unique(gene_associations$DB_Object_ID), function(x){tmp <- gene_associations %>% filter(DB_Object_ID == x)
+# return(tmp$GO_ID)})
+# names(gene_GO) <- unique(gene_associations$DB_Object_ID) 
+# #Save it
+# gene_GO_save <- sapply(gene_GO, function(x){paste(x, collapse = ", ")}) 
+# gene_GO_save <- as.data.frame( gene_GO_save) # Making a dataframe
+# write.table(gene_GO_save, file = "TAIR_to_GO.delim", sep = "\t", quote = FALSE, col.names = FALSE) 
 
 objectSymbol = lapply(unique(gene_associations$DB_Object_ID), function(x){tmp <- gene_associations %>% filter(DB_Object_ID == x)
 return(tmp$DB_Object_Symbol)}) ##If gene assoc
@@ -45,7 +48,7 @@ objectSymbol = objectSymbol[unique(names(objectSymbol))]
 #load Pre-meade Gene-to-go from file
 gene_GO <- readMappings("TAIR_to_GO.delim")
 
-setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-R workshop")
+
 files <- file.path("counts", list.files("counts"))
 
 
@@ -130,9 +133,12 @@ temp = as.data.frame(res_m@listData)
 rownames(temp) = res_m@rownames
 res_m = temp
 
-res
+res_mock = results(allData,contrast = c("group","mmg0","ymg0"),alpha =0.05, pAdjustMethod = "BH")
+temp = as.data.frame(res_mock@listData)
+rownames(temp) = res_mock@rownames
+res_mock = temp
 
-
+remove(temp)
 ##Collect up and down genes
 y_up = res_y[res_y$log2FoldChange > 0,]$padj #collect genes where fold change is positive (up-regulated)
 names(y_up) <- rownames(res_y[res_y$log2FoldChange > 0,]) #collect the genenames
@@ -149,3 +155,11 @@ m_up <- m_up[complete.cases(m_up)]
 m_down = res_m[res_m$log2FoldChange < 0,]$padj 
 names(m_down) <- rownames(res_m[res_m$log2FoldChange < 0,]) 
 m_down <- m_down[complete.cases(m_down)]
+
+mock_up = res_mock[res_mock$log2FoldChange > 0,]$padj #collect genes where fold change is positive (up-regulated)
+names(mock_up) <- rownames(res_mock[res_mock$log2FoldChange > 0,]) #collect the genenames
+mock_up <- mock_up[complete.cases(mock_up)]
+
+mock_down = res_mock[res_mock$log2FoldChange > 0,]$padj #collect genes where fold change is positive (up-regulated)
+names(mock_down) <- rownames(res_mock[res_mock$log2FoldChange > 0,]) #collect the genenames
+mock_down <- mock_down[complete.cases(mock_down)]

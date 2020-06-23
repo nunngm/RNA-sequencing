@@ -1,12 +1,14 @@
+#Set the
+
 goi_y = y_up #sets the genes of interest for young plants
 goi_m = m_up #sets the genes of interested for mature plants
-goi_mm = mm_
+goi_mock = mock_up
 goi_yy = yy_up
 
 #Filter out genes that are not significant
 sg_y = names(goi_y[goi_y<0.05])
 sg_m = names(goi_m[goi_m<0.05])
-sg_mm = names(goi_mm[goi_mm<0.05])
+sg_mock = names(goi_mock[goi_mock<0.05])
 sg_yy =names(goi_yy[goi_yy<0.05])
 
 #All genes sets all the unique genes in the environment and can be used to compare back too
@@ -15,18 +17,7 @@ allGenes = unique(allGenes)
 
 #Set the colours for the venn diagram
 colors = c("#c3db0f","#2cff21","#6b7fff","#ff4059","#de4dff")
-venn.diagram(x = list(sg_y,sg_m,sg_mm),
-             category.names = c("Y.Pst>Y.Mock","M.Pst>M.Mock","M.Mock>Y.Mock"),
-             filename = "3venn12h.tiff",
-             output = T,
-             imagetype = "tiff",
-             scaled = F,
-             col = "black",
-             fill = colors[1:3],
-             cat.col = "black",
-             cat.cex = 2,
-             cat.dist = c(0.12, 0.12,0.04),
-             margin =0.15)
+
 #Two-way venn diagram - More useful
 venn.diagram(x = list(sg_y,sg_m),
              category.names = c("Y.Mo>Y.Ps","M.Mo>M.Ps"),
@@ -47,7 +38,7 @@ venn.diagram(x = list(sg_y,sg_m),
 geneList = as.integer(allGenes %in% sg_y)
 names(geneList) = allGenes
 geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% sg_m)
-geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% sg_mm)
+geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% sg_mock)
 sum(geneList)
 
 geneList = as.factor(geneList) #This has to be a factor for TopGO
@@ -109,3 +100,60 @@ venn[,5] = objectSymbol[venn[,5]]
 venn[,8] = objectSymbol[venn[,8]]
 colnames(venn) = c("Young only","Gene name","Description","Both","Gene name","Description","Mature only","Gene name","Description")
 write.csv(venn,"temp.csv")
+
+#######--------------------------------------------------------------------------------------------
+# Thre-way venn diagram code
+colors = qualitative_hcl(3, palette = "warm",c = 90)
+show_col(colors)
+venn.diagram(x = list(sg_y,sg_m,sg_mock),
+             category.names = c("Y.Pst>Y.Mock","M.Pst>M.Mock","M.Mock>Y.Mock"),
+             filename = "0h3way up.tiff",
+             output = T,
+             imagetype = "tiff",
+             scaled = F,
+             col = "black",
+             fill = colors[1:3],
+             cat.col = "black",
+             cat.cex = 2,
+             cat.dist = c(0.12, 0.12,0.04),
+             margin =0.15)
+
+#Specifies which part of the Venn diagram you would like to complete GO enrichment on
+geneList = as.integer(allGenes %in% sg_y)
+names(geneList) = allGenes
+geneList[geneList==1] = as.integer(! names(geneList[geneList==1])%in% sg_m)
+geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% sg_mock)
+sum(geneList)
+
+geneList = as.factor(geneList) #This has to be a factor for TopGO
+
+#Instead of just comparing to an environment of DEGs this allow comparison to all genes (which have an average expression >10 reads).
+totalGenes = unique(c(names(goi_y),names(goi_m),names(goi_mock)))
+geneList2 = as.integer(totalGenes %in% names(geneList[geneList==1]))
+names(geneList2) = totalGenes
+sum(geneList2)
+geneList2 = as.factor(geneList2)
+
+#Does the GO enrichment (BP, MF, or CC)
+GOdata <- new("topGOdata",
+              ontology = "BP", 
+              allGenes = geneList2,  
+              annotationFun = annFUN.gene2GO, 
+              gene2GO = gene_GO) 
+
+fisher_test <- new("classicCount", testStatistic = GOFisherTest, name = "fisher_test")
+fisher_GO <- getSigGroups(GOdata, fisher_test)
+fisher_GO
+
+#Lets see the most significant ones
+table_GO <- GenTable(GOdata, Fisher = fisher_GO, topNodes = 50)
+table_GO #A table of significant terms
+
+#A tree of the significant terms
+par(cex = 0.2)
+showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 15, useInfo = 'all')
+
+#GO term -> significant genes in goi list
+allGO = genesInTerm(GOdata)
+sigGenes = lapply(allGO,function(x) x[x %in% names(geneList[geneList==1])] )
+objectSymbol[sigGenes[["GO:0009725"]]]

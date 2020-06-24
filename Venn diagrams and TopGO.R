@@ -3,16 +3,14 @@
 goi_y = y_up #sets the genes of interest for young plants
 goi_m = m_up #sets the genes of interested for mature plants
 goi_mock = mock_up
-goi_yy = yy_up
 
 #Filter out genes that are not significant
-sg_y = names(goi_y[goi_y<0.05])
-sg_m = names(goi_m[goi_m<0.05])
-sg_mock = names(goi_mock[goi_mock<0.05])
-sg_yy =names(goi_yy[goi_yy<0.05])
+sg_y = names(goi_y[goi_y<0.01])
+sg_m = names(goi_m[goi_m<0.01])
+sg_mock = names(goi_mock[goi_mock<0.01])
 
 #All genes sets all the unique genes in the environment and can be used to compare back too
-allGenes = c(sg_y,sg_m)
+allGenes = c(sg_y,sg_m,sg_mock)
 allGenes = unique(allGenes)
 
 #Set the colours for the venn diagram
@@ -110,6 +108,7 @@ venn.diagram(x = list(sg_y,sg_m,sg_mock),
              filename = "0h3way up.tiff",
              output = T,
              imagetype = "tiff",
+             euler.d = F,
              scaled = F,
              col = "black",
              fill = colors[1:3],
@@ -118,10 +117,12 @@ venn.diagram(x = list(sg_y,sg_m,sg_mock),
              cat.dist = c(0.12, 0.12,0.04),
              margin =0.15)
 
+venn = draw.triple.venn(427,144,3705,2,35,318,2,category = c("Y.Pst>Y.Mock","M.Pst>M.Mock","M.Mock>Y.Mock"),fill = colors,lty=1,cex=2,cat.cex=2,cat.col="black",cat.dist = c(0.12, 0.12,0.04),margin =0.15,euler.d = F,scaled = F)
+
 #Specifies which part of the Venn diagram you would like to complete GO enrichment on
-geneList = as.integer(allGenes %in% sg_y)
+geneList = as.integer(allGenes %in% sg_m)
 names(geneList) = allGenes
-geneList[geneList==1] = as.integer(! names(geneList[geneList==1])%in% sg_m)
+geneList[geneList==1] = as.integer(! names(geneList[geneList==1])%in% sg_y)
 geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% sg_mock)
 sum(geneList)
 
@@ -151,9 +152,11 @@ table_GO #A table of significant terms
 
 #A tree of the significant terms
 par(cex = 0.2)
-showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 15, useInfo = 'all')
+showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 10, useInfo = 'all')
 
 #GO term -> significant genes in goi list
 allGO = genesInTerm(GOdata)
 sigGenes = lapply(allGO,function(x) x[x %in% names(geneList[geneList==1])] )
-objectSymbol[sigGenes[["GO:0009725"]]]
+objectSymbol[sigGenes[["GO:0009617"]]]
+
+objectSymbol[names(geneList[geneList==1])]

@@ -12,6 +12,7 @@ library(colorspace)
 library(ggrepel)
 library(VennDiagram)
 library(scales)
+library(xlsx)
 
 setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-R workshop")
 
@@ -128,12 +129,12 @@ temp = as.data.frame(res_y@listData)
 rownames(temp) = res_y@rownames
 res_y = temp
 
-res_m = results(allData,contrast = c("group","mpst0","mmg0"),alpha =0.05, pAdjustMethod = "BH")
+res_m = results(allData,contrast = c("group","ypst12","ymg12"),alpha =0.05, pAdjustMethod = "BH")
 temp = as.data.frame(res_m@listData)
 rownames(temp) = res_m@rownames
 res_m = temp
 
-res_mock = results(allData,contrast = c("group","mmg0","ymg0"),alpha =0.05, pAdjustMethod = "BH")
+res_mock = results(allData,contrast = c("group","ypst24","ymg24"),alpha =0.05, pAdjustMethod = "BH")
 temp = as.data.frame(res_mock@listData)
 rownames(temp) = res_mock@rownames
 res_mock = temp

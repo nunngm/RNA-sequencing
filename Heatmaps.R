@@ -14,21 +14,31 @@ library(GenAnalysis)
 
 
 hmcol = hcl_palettes(palette = "Berlin") #Setting the colour palatte
-for_pca <- rlog(allData, blind=T)
+for_pca <- rlog(allData, blind=F)
 rlogMat <- assay(for_pca) # just making a matrix of the counts that have been corrected for over-dispersion in a "blind" fashion
 
 distsRL <- dist(t(rlogMat)) # Computes a distance matrix (Euclidian Distance)
 mat <- as.matrix(distsRL)  # Make sure it is a matrix
 
-rownames(mat) <- colnames(mat) <-   with(colData(allData), paste(age, infection, hpi, sep=" : "))
 
-hc <- hclust(distsRL,method = "average")  # performs hierarchical clustering
+infection = c(rep("Mock",9),rep("Pst",9),rep("Mock",9),rep("Pst",9))
+infection <- as.factor(infection)
+length(infection)
+rownames(mat) <- colnames(mat) <-   with(colData(allData), paste(age, infection, paste0(hpi, "h"), sep=":"))
+
+hc <- hclust(distsRL
+     ,method = "average"
+     )  # performs hierarchical clustering
 par(mar=c(7,4,4,2)+0.1)
-hmcol <- colorRampPalette(brewer.pal(9, "GnBu"))(20)# picking our colours
-p=heatmap.2(mat, Rowv=as.dendrogram(hc),
-            symm=TRUE, trace="none",
-            col = rev(hmcol), margin=c(13,9))
-ggsave("heatmap.pdf",plot = p)
+hmcol <- colorRampPalette(brewer.pal(9, "GnBu"))(100)# picking our colours
+
+tiff(filename = "heatmap.tiff", height = 1080, width = 1280) #opens a tiff device
+heatmap.2(mat, Rowv=as.dendrogram(hc),
+          symm=T, trace="none",
+          cexRow = 2,
+          cexCol = 2,
+          col = rev(hmcol), margin=c(13,9)) #prints to tiff
+dev.off() #closes the file
 
 ##Begin intense heatmapping here
 

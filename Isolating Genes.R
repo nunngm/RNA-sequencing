@@ -81,3 +81,8 @@ mat[4:6,3] = lengths(allDown_unique)
 
 ##Output lists
 write.csv(mat, "temp.csv")
+df = 
+write.xlsx(allUp[[1]],"Young plants.xlsx",sheetName = "Y.Pst>Y>Mock 0.25 hpi",col.names = F, row.names = F)
+write.xlsx(allUp[[2]],"Young plants.xlsx",sheetName = "Y.Pst>Y>Mock 12 hpi",col.names = F, row.names = F,append = T)
+write.xlsx(allUp[[3]],"Young plants.xlsx",sheetName = "Y.Pst>Y>Mock 24 hpi",col.names = F, row.names = F,append = T)
+write.xlsx(allUp_earliest[[1]],"Young plants.xlsx",sheetName = "Unique 0.25 hpi",col.names = F, row.names = F,append = T)

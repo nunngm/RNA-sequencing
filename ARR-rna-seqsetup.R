@@ -40,11 +40,6 @@ gene_associations <- gene_associations[,c(2,3,5,7,9,14)]
 # gene_GO_save <- as.data.frame( gene_GO_save) # Making a dataframe
 # write.table(gene_GO_save, file = "TAIR_to_GO.delim", sep = "\t", quote = FALSE, col.names = FALSE) 
 
-objectSymbol = lapply(unique(gene_associations$DB_Object_ID), function(x){tmp <- gene_associations %>% filter(DB_Object_ID == x)
-return(tmp$DB_Object_Symbol)}) ##If gene assoc
-names(objectSymbol) = unique(gene_associations$DB_Object_ID)
-objectSymbol = unlist2(objectSymbol)
-objectSymbol = objectSymbol[unique(names(objectSymbol))]
 
 #load Pre-meade Gene-to-go from file
 gene_GO <- readMappings("TAIR_to_GO.delim")
@@ -106,11 +101,42 @@ rawData@design = ~group
 allData <- DESeq(rawData)
 
 
-view.gene = function(accession){
-  plotCounts(allData, 
-             gene = toupper(accession),
-             intgroup="group",
-             pch = 20, col = "red")
+##A really nice function (if a little messy) that completes the important comparisons (as I see it) by setting the constant 
+#ie if you set the age to "y" then it will complete ypst - ymg at everytimepoint
+# setting hpi restriects the function to pst - mg comparisons and m - y comparisons but wont compare mpst - ymg
+compare.group = function(age = c("y", "m"), infection = c("mg", "pst"), hpi = c("0", "12", "24")){
+     temp = lapply(age, function(x){tmp = paste0(x,infection)
+                    return(tmp)
+           })
+     for (i in 1:length(temp)){
+          temp[[i]] = lapply(temp[[i]], function(x){tmp = paste0(x, hpi)
+                              return(tmp)
+          })
+     }
+     out = character()
+     for (i in 1:length(temp[[1]][[1]])){
+          if(length(temp[[1]]) > 1){
+               for (j in 1:length(temp)){
+                    out = rbind(out, c(temp[[j]][[2]][i], temp[[j]][[1]][i]))
+               }
+          }
+          if (length(temp) > 1){
+               for (j in 1:length(temp[[1]])){
+                    out = rbind(out, c(temp[[2]][[j]][i], temp[[1]][[j]][i]))
+               }
+          }
+     }
+     ##need to get rownames efficiently
+     final = list()
+     for (i in 1:nrow(out)){
+          tmp = results(allData,contrast = c("group", out[i, 1], out[i, 2]), alpha = 0.05, pAdjustMethod="BH")
+          temp = as.data.frame(tmp@listData)
+          rownames(temp) = tmp@rownames
+          remove(tmp)
+          final[[i]] = temp
+     }
+     names(final) = paste0(out[,1], out[,2])
+     return(final)
 }
 
 #Set-up the raw data comparison
@@ -122,17 +148,23 @@ temp = as.data.frame(res_y@listData)
 rownames(temp) = res_y@rownames
 res_y = temp
 
-res_m = results(allData,contrast = c("group","ypst12","ymg12"),alpha =0.05, pAdjustMethod = "BH")
+res_m = results(allData,contrast = c("group","mpst0","mmg0"),alpha =0.05, pAdjustMethod = "BH")
 temp = as.data.frame(res_m@listData)
 rownames(temp) = res_m@rownames
 res_m = temp
 
-res_mock = results(allData,contrast = c("group","ypst24","ymg24"),alpha =0.05, pAdjustMethod = "BH")
+res_mock = results(allData,contrast = c("group","mmg0","ymg0"),alpha =0.05, pAdjustMethod = "BH")
 temp = as.data.frame(res_mock@listData)
 rownames(temp) = res_mock@rownames
 res_mock = temp
 
+res_pst = results(allData, contrast = c("group", "mpst0", "ypst0"), alpha = 0.05, pAdjustMethod = "BH")
+temp = as.data.frame(res_pst@listData)
+rownames(temp) = res_pst@rownames
+res_pst = temp
+
 remove(temp)
+
 ##Collect up and down genes
 y_up = res_y[res_y$log2FoldChange > 0,]$padj #collect genes where fold change is positive (up-regulated)
 names(y_up) <- rownames(res_y[res_y$log2FoldChange > 0,]) #collect the genenames
@@ -157,3 +189,53 @@ mock_up <- mock_up[complete.cases(mock_up)]
 mock_down = res_mock[res_mock$log2FoldChange > 0,]$padj #collect genes where fold change is positive (up-regulated)
 names(mock_down) <- rownames(res_mock[res_mock$log2FoldChange > 0,]) #collect the genenames
 mock_down <- mock_down[complete.cases(mock_down)]
+
+pst_up = res_pst[res_pst$log2FoldChange > 0, ]$padj
+names(pst_up) = rownames(res_pst[res_pst$log2FoldChange > 0, ])
+pst_up = pst_up[complete.cases(pst_up)]
+
+pst_down = res_pst[res_pst$log2FoldChange > 0, ]$padj
+names(pst_down) = rownames(res_pst[res_pst$log2FoldChange > 0, ])
+pst_down = pst_down[complete.cases(pst_down)]
+
+
+
+gene_descriptions = read.delim("gene_description.delim",sep = "\t",header = FALSE,stringsAsFactors = F,quote = "") 
+gene_descriptions[,1]=tools::file_path_sans_ext(gene_descriptions[,1]) #removes ".1 or.2 ...etc" after each gene (these indicate the splice variant) 
+gene_descriptions = gene_descriptions[,c(1,4)] #remove unnecessary columns
+colnames(gene_descriptions) = c("accession", "description")
+gene_descriptions = gene_descriptions %>% filter(!description == "") #remove splice variants with empty description
+gene_descriptions = gene_descriptions %>% distinct(accession, .keep_all = T) #keep only the first splice variant with a description
+
+#Makes a vector similar to object symbol to go from accession -> description
+desvec = gene_descriptions[,2]
+names(desvec) = gene_descriptions[,1] 
+
+objectSymbol = lapply(unique(gene_associations$DB_Object_ID), function(x){tmp <- gene_associations %>% filter(DB_Object_ID == x)
+return(tmp$DB_Object_Symbol)}) ##If gene assoc
+names(objectSymbol) = unique(gene_associations$DB_Object_ID)
+objectSymbol = unlist2(objectSymbol)
+objectSymbol = objectSymbol[unique(names(objectSymbol))]
+
+countMean = res_y$baseMean
+names(countMean) = rownames(res_y)
+
+genes.info = function(lst){
+     df = cbind(lst, 
+          objectSymbol[lst], 
+          countMean[lst], 
+          res_y$log2FoldChange[rownames(res_y) %in% lst], 
+          res_y$padj[rownames(res_y) %in% lst], 
+          res_m$log2FoldChange[rownames(res_m) %in% lst], 
+          res_m$padj[rownames(res_m) %in% lst], 
+          desvec[lst]
+     )
+     return(df)
+}
+
+view.gene = function(accession){
+  plotCounts(allData, 
+             gene = toupper(accession),
+             intgroup="group",
+             pch = 20, col = "red")
+}

@@ -1,28 +1,28 @@
 ##Counting DRGs
+res = compare.group(age = "y")
+tp = c("0.25", "12", "24")
+filebase = "y.xlsx"
+comp = c("Y.Pst>Y.Mock", "Y.Mock>Y.Pst")
+reg = c("Up", "Down")
+pval = 0.05
+lfc_cutoff = 0
 
-t0 = y_up #sets the genes of interest for young plants
-t12 = m_up #sets the genes of interested for mature plants
-t24 = mock_up
-# t0 = names(t0[t0<0.01])
-# t12 = names(t12[t12<0.01])
-# t24 = names(t24[t24<0.01])
+allGenes = lapply(res, function(x){
+          up = x[x$log2FoldChange > lfc_cutoff, ]$padj #collect genes where fold change is positive (up-regulated)
+          names(up) = rownames(x[x$log2FoldChange > lfc_cutoff, ]) #collect the genenames
+          up = up[complete.cases(up)]
+          up = names(up[up < pval])
+          down = x[x$log2FoldChange < lfc_cutoff, ]$padj #collect genes where fold change is positive (up-regulated)
+          names(down) <- rownames(x[x$log2FoldChange < lfc_cutoff, ]) #collect the genenames
+          down <- down[complete.cases(down)]
+          down = names(down[down < pval])
+          up = list(up, down)
+          names(up) = c("up", "down")
+          return(up)
+})
 
-t0_down = y_down
-t12_down = m_down
-t24_down = mock_down
-
-tp = c("t0", "t12", "t24")
-allUp = list(names(t0[t0<0.01]),
-             names(t12[t12<0.01]),
-             names(t24[t24<0.01])
-     )
-names(allUp) = tp
-
-allDown = list(names(t0_down[t0_down<0.01]),
-               names(t12_down[t12_down<0.01]),
-               names(t24_down[t24_down<0.01])
-     )
-names(allDown) = tp
+allUp = lapply(allGenes, `[[`, 1)
+allDown = lapply(allGenes, `[[`, 2)
 
 #Create earliest expression lists
 allUp_earliest = list(
@@ -51,38 +51,77 @@ allDown_unique = list(
 
 )
 
+allUp_nonunique = list(
+                    allUp[[1]][allUp[[1]] %in% allUp[[2]] ==T | allUp[[1]] %in% allUp[[3]] ==T],
+                    allUp[[2]][allUp[[2]] %in% allUp[[1]] ==T | allUp[[2]] %in% allUp[[3]] ==T],
+                    allUp[[3]][allUp[[3]] %in% allUp[[1]] ==T | allUp[[3]] %in% allUp[[2]] ==T]
+)
 
-# t0_unique = t0[as.integer(! t0 %in% t12) ==1 & as.integer(! t0 %in% t24) == 1]
-# t12_unique = t12[as.integer(! t12 %in% t0) ==1 & as.integer(! t12 %in% t24) == 1]
-# t24_unique = t24[as.integer(! t24 %in% t0) ==1 & as.integer(! t24 %in% t12) == 1]
-# 
-# t0_down_unique = t0_down[as.integer(! t0_down %in% t12_down) ==1 & as.integer(! t0_down %in% t24_down) == 1]
-# t12_down_unique = t12_down[as.integer(! t12_down %in% t0_down) ==1 & as.integer(! t12_down %in% t24_down) == 1]
-# t24_down_unique = t24_down[as.integer(! t24_down %in% t0_down) ==1 & as.integer(! t24_down %in% t12_down) == 1]
+allDown_nonunique = list(
+                    allDown[[1]][allDown[[1]] %in% allDown[[2]] ==T | allDown[[1]] %in% allDown[[3]] ==T],
+                    allDown[[2]][allDown[[2]] %in% allDown[[1]] ==T | allDown[[2]] %in% allDown[[3]] ==T],
+                    allDown[[3]][allDown[[3]] %in% allDown[[1]] ==T | allDown[[3]] %in% allDown[[2]] ==T]
+)
 
-## Non-unique genes
-# t0_nonunique = t0[as.integer( t0 %in% t12) ==1 | as.integer( t0 %in% t24) == 1]
-# t12_nonunique = t12[as.integer( t12 %in% t0) ==1 | as.integer( t12 %in% t24) == 1]
-# t24_nonunique = t12[as.integer( t24 %in% t0) ==1 | as.integer( t24 %in% t12) == 1]
+#Variables
+
 
 #Create totals
-mat = matrix("",nrow = 6, ncol = 3)
+mat = matrix("",nrow = 6, ncol = 4)
 colnames(mat) = c("Total DEGs", "Earliest Only", "Unique DEGs"
-                    #,"Non-Unique DEGs"
+                    ,"Non-Unique DEGs"
      )
-tp = c("t0.25", "t12", "t24")
+
 rownames(mat) = c(paste0(tp,"_up"), paste0(tp,"_dwn"))
-mat[1:3,1] = lengths(allUp)
-mat[1:3,2] = lengths(allUp_earliest)
-mat[1:3,3] = lengths(allUp_unique)
-mat[4:6,1] = lengths(allDown)
-mat[4:6,2] = lengths(allDown_earliest)
-mat[4:6,3] = lengths(allDown_unique)
+mat[1:3, 1] = lengths(allUp)
+mat[1:3, 2] = lengths(allUp_earliest)
+mat[1:3, 3] = lengths(allUp_unique)
+mat[1:3, 4] = lengths(allUp_nonunique)
+mat[4:6, 1] = lengths(allDown)
+mat[4:6, 2] = lengths(allDown_earliest)
+mat[4:6, 3] = lengths(allDown_unique)
+mat[4:6, 4] = lengths(allDown_nonunique)
 
 ##Output lists
-write.csv(mat, "temp.csv")
-df = genes.info(allUp[[1]])
-write.xlsx(allUp[[1]],"Young plants.xlsx",sheetName = "Y.Pst>Y>Mock 0.25 hpi",col.names = F, row.names = F)
+
+write.xlsx(mat, filebase, sheetName = "Counts", col.names = T, row.names = T)
+for(j in 1:2){
+     write.xlsx(0,paste0(reg[j], "_", filebase))
+     for(i in 1:3){
+          time = strsplit(tp, ".", fixed = T)[[i]][1]
+          
+          df = genes.info(get(paste0("all", reg[j]))[[i]], time)
+          write.xlsx(df , paste0(reg[j], "_", filebase), sheetName = paste0(comp[j], " ", tp[i]," hpi") ,col.names = T, row.names = F, append = T)
+          df = genes.info(get(paste0("all", reg[j], "_earliest"))[[i]], time)
+          write.xlsx(df , paste0(reg[j], "_", filebase), sheetName = paste0(comp[j], " earliest ", tp[i]," hpi") ,col.names = T, row.names = F, append = T)
+          df = genes.info(get(paste0("all", reg[j], "_unique"))[[i]], time)
+          write.xlsx(df , paste0(reg[j], "_", filebase), sheetName = paste0(comp[j], " unique ", tp[i]," hpi") ,col.names = T, row.names = F, append = T)
+          df = genes.info(get(paste0("all", reg[j], "_nonunique"))[[i]], time)
+          write.xlsx(df , paste0(reg[j], "_", filebase), sheetName = paste0(comp[j], " nonunique ", tp[i]," hpi") ,col.names = T, row.names = F, append = T)
+     }
+     removeSheet(paste0(reg[j], "_", filebase))
+}
+
+
+
+#______________________Go no further__________________________________________
+
+df = genes.info(allUp[[1]], "0")
+write.xlsx(df , filebase, sheetName = paste0(comp ," 0.25 hpi") ,col.names = T, row.names = F)
+df = genes.info(allUp[[2]], "12")
+write.xlsx(df , filebase, sheetName = paste0(comp, " 12 hpi") ,col.names = T, row.names = F, append = T)
+df = genes.info(allUp[[3]], "24")
+write.xlsx(df , filebase, sheetName = paste0(comp, " 24 hpi") ,col.names = T, row.names = F, append = T)
+
+df = genes.info(allUp_earliest[[1]], "0")
+write.xlsx(df , filebase, sheetName = paste0(comp, " early 0.25 hpi"),col.names = T, row.names = F, append = T)
+df = genes.info(allUp_earliest[[2]], "12")
+write.xlsx(df , filebase, sheetName = paste0(comp, " early 12 hpi"),col.names = T, row.names = F, append = T)
+df = genes.info(allUp_earliest[[3]], "24")
+write.xlsx(df , filebase, sheetName = paste0(comp, " early 24 hpi"),col.names = T, row.names = F, append = T)
+
+
+
 write.xlsx(allUp[[2]],"Young plants.xlsx",sheetName = "Y.Pst>Y>Mock 12 hpi",col.names = F, row.names = F,append = T)
 write.xlsx(allUp[[3]],"Young plants.xlsx",sheetName = "Y.Pst>Y>Mock 24 hpi",col.names = F, row.names = F,append = T)
 write.xlsx(allUp_earliest[[1]],"Young plants.xlsx",sheetName = "Unique 0.25 hpi",col.names = F, row.names = F,append = T)

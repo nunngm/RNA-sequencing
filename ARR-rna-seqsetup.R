@@ -220,7 +220,18 @@ objectSymbol = objectSymbol[unique(names(objectSymbol))]
 countMean = res_y$baseMean
 names(countMean) = rownames(res_y)
 
-genes.info = function(lst){
+genes.info = function(lst, hpi){
+     hpi = as.character(hpi)
+     res_y= results(allData,contrast = c("group", paste0("ypst", hpi), paste0("ymg", hpi)), alpha = 0.05, pAdjustMethod="BH")
+     temp = as.data.frame(res_y@listData)
+     rownames(temp) = res_y@rownames
+     res_y = temp
+
+     res_m = results(allData,contrast = c("group", paste0("mpst", hpi), paste0("mmg", hpi)),alpha =0.05, pAdjustMethod = "BH")
+     temp = as.data.frame(res_m@listData)
+     rownames(temp) = res_m@rownames
+     res_m = temp
+     
      df = cbind(lst, 
           objectSymbol[lst], 
           countMean[lst], 
@@ -230,6 +241,7 @@ genes.info = function(lst){
           res_m$padj[rownames(res_m) %in% lst], 
           desvec[lst]
      )
+     colnames(df) = c("Accession", "Gene name", "Mean count", "Y.Pst-Y.Mock LFC", "q-val", "M.Pst-M.Mock LFC", "q-val", "Gene description")
      return(df)
 }
 

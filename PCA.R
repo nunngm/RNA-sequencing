@@ -58,8 +58,9 @@ d <- data.frame(PC1 = pca$x[, pc_x], PC2 = pca$x[, pc_y],
                 group = intgroup_df, 
                 age = colData(for_pca)[,1],
                 inf = colData(for_pca)[,2],
-                hpi = colData(for_pca)[,3],
-                ageinf = as.integer(as.factor(paste0(d$age,d$)))) #In pca$x[,]
+                hpi = colData(for_pca)[,3]#,
+                #ageinf = as.integer(as.factor(paste0(d$age,d$)))
+     ) #In pca$x[,]
 temp = as.integer(as.factor(paste0(d$inf,d$age)))
 temp = lapply(temp, function(x){tmp = if (x>2){
     x=15+(x-3)
@@ -84,3 +85,5 @@ ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = "hpi")) + geom_point(s
     axis.text = element_text(size=15),
 )
 
+ggsave("temp.png")
+pdf("myplots.pdf")

@@ -6,15 +6,15 @@ goi_mock = mock_up
 goi_pst = pst_up
 
 #Filter out genes that are not significant
-sg_y = names(goi_y[goi_y < 0.05])
-sg_m = names(goi_m[goi_m < 0.05])
-sg_mock = names(goi_mock[goi_mock < 0.05])
+sg_y = names(goi_y[goi_y < 0.01])
+sg_m = names(goi_m[goi_m < 0.01])
+sg_mock = names(goi_mock[goi_mock < 0.01])
 sg_pst = names(goi_pst[goi_pst < 0.05])
 
 #All genes sets all the unique genes in the environment and can be used to compare back too
 allGenes = c(sg_y,sg_m
                ,sg_mock
-               ,sg_pst
+              # ,sg_pst
      )
 allGenes = unique(allGenes)
 
@@ -157,8 +157,8 @@ write.csv(venn,"temp.csv")
 colors = qualitative_hcl(3, palette = "warm",c = 90)
 show_col(colors)
 venn.diagram(x = list(sg_y,sg_m,sg_mock),
-             category.names = c("Y.Pst>Y.Mock","M.Pst>M.Mock","M.Mock>Y.Mock"),
-             filename = "0h3way up.tiff",
+             category.names = c("Y.Pst>Y.Mock","M.Pst>Y.Mock","M.Mock>Y.Mock"),
+             filename = "temp.tiff",
              output = T,
              imagetype = "tiff",
              euler.d = F,
@@ -175,11 +175,11 @@ venn = draw.triple.venn(427,144,3705,2,35,318,2,category = c("Y.Pst>Y.Mock","M.P
 #Specifies which part of the Venn diagram you would like to complete GO enrichment on
 geneList = as.integer(allGenes %in% sg_m)
 names(geneList) = allGenes
-geneList[geneList==1] = as.integer(! names(geneList[geneList==1])%in% sg_y)
 geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% sg_mock)
+geneList[geneList==1] = as.integer(! names(geneList[geneList==1])%in% sg_y)
 sum(geneList)
 
-geneList = as.factor(geneList) #This has to be a factor for TopGO
+#geneList = as.factor(geneList) #This has to be a factor for TopGO
 
 #Instead of just comparing to an environment of DEGs this allow comparison to all genes (which have an average expression >10 reads).
 totalGenes = unique(c(names(goi_y),names(goi_m),names(goi_mock)))
@@ -205,12 +205,12 @@ table_GO #A table of significant terms
 
 #A tree of the significant terms
 par(cex = 0.2)
-showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 10, useInfo = 'all')
+showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 25, useInfo = 'all')
 
 #GO term -> significant genes in goi list
 allGO = genesInTerm(GOdata)
 sigGenes = lapply(allGO,function(x) x[x %in% names(geneList[geneList==1])] )
-objectSymbol[sigGenes[["GO:0009617"]]]
+objectSymbol[sigGenes[["GO:0042742"]]]
 
 objectSymbol[names(geneList[geneList==1])]
 
@@ -241,3 +241,17 @@ geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% sg_pst)
 sum(geneList)
 objectSymbol[names(geneList[geneList==1])]
 
+
+venn.diagram(x = list(sg_y,sg_m,sg_mock),
+             category.names = c("Y.Pst>Y.Mock","M.Pst>Y.Mock","M.Mock>Y.Mock"),
+             filename = "temp.tiff",
+             output = T,
+             imagetype = "tiff",
+             euler.d = F,
+             scaled = F,
+             col = "black",
+             fill = colors[1:3],
+             cat.col = "black",
+             cat.cex = 2,
+             cat.dist = c(0.12, 0.12,0.04),
+             margin =0.15)

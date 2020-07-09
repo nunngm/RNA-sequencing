@@ -1,3 +1,4 @@
+options(java.parameters = "-Xmx1024m")
 library(DESeq2)
 library(RCurl)
 library(tximport)
@@ -143,17 +144,17 @@ compare.group = function(age = c("y", "m"), infection = c("mg", "pst"), hpi = c(
 #contrast = c(intgroup,Var1, Var2) -> contrasts Var 1 to reference (Var2)
 #pAdjustMethod ="BH" -> is the false discovery rate method
 ## lfc Shrinkage doesn't matter here as p-values are calculated based on unshrunken values therefore shrinkage should only be used for data visualisation and for ranking of genes
-res_y= results(allData,contrast = c("group", "ypst0", "ymg0"), alpha = 0.05, pAdjustMethod="BH")
+res_y= results(allData,contrast = c("group", "ypst24", "ymg24"), alpha = 0.05, pAdjustMethod="BH")
 temp = as.data.frame(res_y@listData)
 rownames(temp) = res_y@rownames
 res_y = temp
 
-res_m = results(allData,contrast = c("group","mpst0","mmg0"),alpha =0.05, pAdjustMethod = "BH")
+res_m = results(allData,contrast = c("group","mpst24","ymg24"),alpha =0.05, pAdjustMethod = "BH")
 temp = as.data.frame(res_m@listData)
 rownames(temp) = res_m@rownames
 res_m = temp
 
-res_mock = results(allData,contrast = c("group","mmg0","ymg0"),alpha =0.05, pAdjustMethod = "BH")
+res_mock = results(allData,contrast = c("group","mmg24","ymg24"),alpha =0.05, pAdjustMethod = "BH")
 temp = as.data.frame(res_mock@listData)
 rownames(temp) = res_mock@rownames
 res_mock = temp

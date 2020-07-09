@@ -1,8 +1,8 @@
 ##Counting DRGs
-res = compare.group(age = "y")
+res = compare.group(age = "m")
 tp = c("0.25", "12", "24")
-filebase = "y.xlsx"
-comp = c("Y.Pst>Y.Mock", "Y.Mock>Y.Pst")
+filebase = "m.xlsx"
+comp = c("M.Pst>M.Mock", "M.Mock>M.Pst")
 reg = c("Up", "Down")
 pval = 0.05
 lfc_cutoff = 0
@@ -99,7 +99,6 @@ for(j in 1:2){
           df = genes.info(get(paste0("all", reg[j], "_nonunique"))[[i]], time)
           write.xlsx(df , paste0(reg[j], "_", filebase), sheetName = paste0(comp[j], " nonunique ", tp[i]," hpi") ,col.names = T, row.names = F, append = T)
      }
-     removeSheet(paste0(reg[j], "_", filebase))
 }
 
 

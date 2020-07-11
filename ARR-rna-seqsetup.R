@@ -14,6 +14,7 @@ library(ggrepel)
 library(VennDiagram)
 library(scales)
 library(xlsx)
+library(stringi)
 
 setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-R workshop")
 
@@ -246,9 +247,88 @@ genes.info = function(lst, hpi){
      return(df)
 }
 
-view.gene = function(accession){
-  plotCounts(allData, 
-             gene = toupper(accession),
-             intgroup="group",
-             pch = 20, col = "red")
+# view.gene = function(accession){
+#   plotCounts(allData, 
+#              gene = toupper(accession),
+#              intgroup="group",
+#              pch = 20, col = "red")
+# }
+
+# view.gene = function(accession){
+#      geneCount <- plotCounts(allData, gene = toupper(accession), 
+#                         intgroup = c("age", "infection","hpi"), returnData = TRUE)
+#      geneCount$hpi <- as.numeric(as.character(geneCount$hpi))
+#      geneCount$hpi[geneCount$hpi == 0] = 0.25
+#      geneCount = cbind(geneCount, paste0(as.character(geneCount$age), as.character(geneCount$infection)))
+#      colnames(geneCount)[ncol(geneCount)] = "ageinf"
+#      
+#      ggplot(geneCount,
+#        aes(x = hpi, y = count, color = age, lty = infection, group = ageinf)) +
+#           #geom_point() + #displays individual counts
+#           stat_summary(fun=mean, geom="line", size = 1) + 
+#           stat_summary(fun = mean,
+#                     fun.min = function(x) {mean(x) - sd(x)}, 
+#                     fun.max = function(x) {mean(x) + sd(x)}, 
+#                     geom = "pointrange", lty =1 , size =1)+theme(panel.grid.major = element_blank(), 
+#          panel.grid.minor = element_blank(),
+#          panel.background = element_blank(), 
+#          axis.line = element_line(colour = "black", size=1),
+#          axis.title.x=element_text(size=15),
+#          #axis.text.x=element_blank()),
+#          axis.ticks=element_line(colour = "black", size =1),
+#          axis.ticks.length = unit(5,"points") ,
+#          axis.title.y = element_text(size=15),
+#          legend.position = "right",
+#          axis.text = element_text(size=15),
+#          legend.text = element_text(size=15)
+#      )
+# }
+
+view.gene = function(accession, fileName = objectSymbol[toupper(accession)], graph = F){
+     geneCount <- plotCounts(allData, gene = toupper(accession), 
+                        intgroup = c("age", "infection","hpi"), returnData = TRUE)
+     geneCount$hpi <- as.numeric(as.character(geneCount$hpi))
+     geneCount$hpi[geneCount$hpi == 0] = 0.25
+     geneCount = cbind(geneCount, paste0(as.character(geneCount$age), as.character(geneCount$infection)))
+     colnames(geneCount)[ncol(geneCount)] = "ageinf"
+     
+     p = ggplot(geneCount,
+       aes(x = hpi, y = count, color = age, lty = infection, group = ageinf)) +
+          #geom_point() + #displays individual counts
+          stat_summary(fun=mean, geom="line", size = 1) + 
+          stat_summary(fun = mean,
+                    fun.min = function(x) {mean(x) - sd(x)}, 
+                    fun.max = function(x) {mean(x) + sd(x)}, 
+                    geom = "pointrange", lty =1 , size =1)+theme(panel.grid.major = element_blank(), 
+         panel.grid.minor = element_blank(),
+         panel.background = element_blank(), 
+         axis.line = element_line(colour = "black", size=1),
+         axis.title.x=element_text(size=15),
+         #axis.text.x=element_blank()),
+         axis.ticks=element_line(colour = "black", size =1),
+         axis.ticks.length = unit(5,"points") ,
+         axis.title.y = element_text(size=15),
+         legend.position = "right",
+         axis.text = element_text(size=15),
+         legend.text = element_text(size=15)
+     )
+     if (graph == T){
+          ggsave(paste0(geneName, ".png"), plot = p)
+          paste0(geneName, ".png")
+          p
+     } else {
+          p
+          geneName
+     }
+
+     # ggsave(paste0(objectSymbol[toupper(accession)], ".png"), plot = p)
+     # paste0(objectSymbol[toupper(accession)], ".png")
 }
+
+# graph.gene = function(accession){
+#      genecount = counts(allData, normalized = T)[toupper(accession), ]
+#      timpoints = as.factor(t(stri_list2matrix(strsplit(names(genecount), split = "_")))[, 3]) #pulls out timepoitns
+#      genecount
+#      
+#      
+# }

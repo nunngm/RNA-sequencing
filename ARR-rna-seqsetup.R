@@ -311,14 +311,14 @@ view.gene = function(accession, fileName = objectSymbol[toupper(accession)], gra
          legend.position = "right",
          axis.text = element_text(size=15),
          legend.text = element_text(size=15)
-     )
+          ) + ggtitle(fileName)
      if (graph == T){
-          ggsave(paste0(geneName, ".png"), plot = p)
-          paste0(geneName, ".png")
+          ggsave(paste0(fileName, ".png"), plot = p)
+          
           p
+
      } else {
-          p
-          geneName
+         p  
      }
 
      # ggsave(paste0(objectSymbol[toupper(accession)], ".png"), plot = p)

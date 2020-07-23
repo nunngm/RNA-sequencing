@@ -522,7 +522,7 @@ p_fake <- rbeta(21274, 1,1)
 hist(p_fake, ylim=c (0,2500))
 hist(res_shrunk_y$pvalue)
 hist(res_shrunk_m$pvalue)
-plotCounts(allData,gene = "AT4G01390", intgroup = "group",pch = 20)
+plotCounts(allData,gene = "AT5G10760", intgroup = "group",pch = 20)
 ```
 
 ## Hierarchical Clustering
@@ -550,6 +550,8 @@ treatcounts = cbind(rowMeans(counts(allData,normalized = T)[,1:3]),
 rownames(treatcounts) = rownames(counts(allData,normalized = T)) #Tags each row with appropriate accession number
 colnames(treatcounts) = c("m:mg:0h","m:mg:12h","m:mg:24h","m:pst:0h","m:pst:12h","m:pst:24h","y:mg:0h","y:mg:12h","y:mg:24h","y:pst:0h","y:pst:12h","y:pst:24h")
 treatcounts = as.data.frame(treatcounts)
+temp = c(7:12,1:6)
+treatcounts = treatcounts[,temp]
 write.csv(treatcounts,"meancounts.csv")
 
 #Same thing as above but for the standard deviations for each of the treatment types
@@ -566,8 +568,10 @@ std = cbind(rowSds(counts(allData,normalized = T)[,1:3]),
                     rowSds(counts(allData,normalized = T)[,31:33]),
                     rowSds(counts(allData,normalized = T)[,34:36]))
 std = as.data.frame(std)
+std = std[,temp]
 colnames(std) = colnames(treatcounts)
 rownames(std) = rownames(treatcounts)
+
 write.csv(std,"stdcounts.csv")
 
 

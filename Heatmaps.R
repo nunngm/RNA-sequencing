@@ -103,7 +103,8 @@ full = c(7,1,10,4,8,2,11,5,9,3,12,6)
 byage = c(7,10,1,4,8,11,2,5,9,12,3,6)
 full = c(7:12,1:6)
 pst = c(10:12,4:6)
-
+##-----------------------------This is BROKEN and outputs uninterpreted results because the count # is logged and THEN scaled to the mean of the LOG counts this just screws with everything. To do this better it should use normalised counts and not scale the result.
+#Additionally I would redo the analysis for genes so it was shrunk and pick all DEGs across all the time points then put them into 1 figure of Y.Mock, Y.Pst, M.Mock, M.Pst (Y.Pst-Y.Mock, M.Mock-Y.Mock, M.Pst-Y.Mock.)
 hm_mat_DGEgenes = log_norm_counts[names(sig),sub_24] #Select only genes that were significantly differentially expressed at the for the indicated subgroup (ie 24 hpi)
 rownames(hm_mat_DGEgenes) = objectSymbol[names(sig)] #use object symbol to replace accession #s with gene names where possible
 hm_mat_DGEgenes =hm_mat_DGEgenes[rowSums(hm_mat_DGEgenes)!=0,]

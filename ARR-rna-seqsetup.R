@@ -325,10 +325,13 @@ view.gene = function(accession, fileName = objectSymbol[toupper(accession)], gra
      # paste0(objectSymbol[toupper(accession)], ".png")
 }
 
-# graph.gene = function(accession){
-#      genecount = counts(allData, normalized = T)[toupper(accession), ]
-#      timpoints = as.factor(t(stri_list2matrix(strsplit(names(genecount), split = "_")))[, 3]) #pulls out timepoitns
-#      genecount
-#      
-#      
-# }
+log2linear = function(lfc){
+     lfc = lapply(lfc, function(x){
+          temp = 2^x
+          if (temp < 1){
+               temp = -1/temp
+          }
+          return(temp)
+     })
+     return(unlist(lfc))
+}

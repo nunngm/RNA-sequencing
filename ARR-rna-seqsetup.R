@@ -150,7 +150,7 @@ temp = as.data.frame(res_y@listData)
 rownames(temp) = res_y@rownames
 res_y = temp
 
-res_m = results(allData,contrast = c("group","mpst24","ymg24"),alpha =0.05, pAdjustMethod = "BH")
+res_m = results(allData,contrast = c("group","mpst24","mmg24"),alpha =0.05, pAdjustMethod = "BH")
 temp = as.data.frame(res_m@listData)
 rownames(temp) = res_m@rownames
 res_m = temp
@@ -222,7 +222,7 @@ objectSymbol = objectSymbol[unique(names(objectSymbol))]
 countMean = res_y$baseMean
 names(countMean) = rownames(res_y)
 
-genes.info = function(lst, hpi){
+genes.info = function(lst, hpi, linear = T){
      hpi = as.character(hpi)
      res_y= results(allData,contrast = c("group", paste0("ypst", hpi), paste0("ymg", hpi)), alpha = 0.05, pAdjustMethod="BH")
      temp = as.data.frame(res_y@listData)
@@ -233,13 +233,20 @@ genes.info = function(lst, hpi){
      temp = as.data.frame(res_m@listData)
      rownames(temp) = res_m@rownames
      res_m = temp
+     yfc = res_y$log2FoldChange[rownames(res_y) %in% lst]
+     mfc = res_m$log2FoldChange[rownames(res_m) %in% lst]
+     
+     if (linear == T){
+          yfc = log2linear(yfc)
+          mfc = log2linear(mfc)
+     }
      
      df = cbind(lst, 
           objectSymbol[lst], 
           countMean[lst], 
-          res_y$log2FoldChange[rownames(res_y) %in% lst], 
+          yfc, 
           res_y$padj[rownames(res_y) %in% lst], 
-          res_m$log2FoldChange[rownames(res_m) %in% lst], 
+          mfc, 
           res_m$padj[rownames(res_m) %in% lst], 
           desvec[lst]
      )
@@ -327,7 +334,7 @@ view.gene = function(accession, fileName = objectSymbol[toupper(accession)], gra
 
 log2linear = function(lfc){
      lfc = lapply(lfc, function(x){
-          temp = 2^x
+          temp = 2^(as.double( x))
           if (temp < 1){
                temp = -1/temp
           }

@@ -1,4 +1,12 @@
 #Set the
+hp = "24"
+res = compare.group(hp)
+res[[2]]
+
+y_up = res_y[res_y$log2FoldChange > 0,]$padj #collect genes where fold change is positive (up-regulated)
+names(y_up) <- rownames(res_y[res_y$log2FoldChange > 0,]) #collect the genenames
+y_up <- y_up[complete.cases(y_up)] #remove any NAs
+
 
 goi_y = y_up #sets the genes of interest for young plants
 goi_m = m_up #sets the genes of interested for mature plants
@@ -13,7 +21,7 @@ sg_pst = names(goi_pst[goi_pst < 0.05])
 
 #All genes sets all the unique genes in the environment and can be used to compare back too
 allGenes = c(sg_y,sg_m
-               ,sg_mock
+               #,sg_mock
               # ,sg_pst
      )
 allGenes = unique(allGenes)
@@ -97,6 +105,22 @@ venn_both = names(venn_both[venn_both==1])
 # venn = list(venn_y,venn_both,venn_m)
 
 #prepping the excel file
+df = genes.info(venn_y, hp)
+# sum(is.na(df[,4]))
+# df[,4] = log2linear(df[,4])
+# df[,6] = log2linear(df[,6])
+write.xlsx(df, "temp.xlsx", sheetName = "Y.Pst>Y.Mock 24 hpi", col.names = T, row.names = F)
+
+df = genes.info(venn_both, hp)
+write.xlsx(df, "temp.xlsx", sheetName = "Y.Pst>Y.Mock, M.Pst>M.Mock 24 hpi", col.names = T, row.names = F, append = T)
+
+df = genes.info(venn_m, hp)
+write.xlsx(df, "temp.xlsx", sheetName = "M.Pst>M.Mock 24 hpi", col.names = T, row.names = F, append = T)
+
+
+
+
+
 column = c("Accession number", "Gene names", "Mean count", "Y.Pst-Y.Mock log2 fold-change", "q-val", "M.Pst-M.Mock log2 fold-change", "q-val", "Gene description")
 df = cbind(venn_y, 
           objectSymbol[venn_y], 

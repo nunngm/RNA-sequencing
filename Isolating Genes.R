@@ -124,3 +124,69 @@ write.xlsx(df , filebase, sheetName = paste0(comp, " early 24 hpi"),col.names = 
 write.xlsx(allUp[[2]],"Young plants.xlsx",sheetName = "Y.Pst>Y>Mock 12 hpi",col.names = F, row.names = F,append = T)
 write.xlsx(allUp[[3]],"Young plants.xlsx",sheetName = "Y.Pst>Y>Mock 24 hpi",col.names = F, row.names = F,append = T)
 write.xlsx(allUp_earliest[[1]],"Young plants.xlsx",sheetName = "Unique 0.25 hpi",col.names = F, row.names = F,append = T)
+
+
+#Combining P-values (fisher's test) _______________________
+pvals = c(0.0000001,1)
+
+x = -2*sum(log(pvals))
+
+1-pchisq(x, 2*length(pvals))
+hour = "0"
+temp2 = list(1,2,3)
+
+
+hour = c("0", "12", "24")
+tmp = lapply(hour, find.unique)
+sg_m = tmp[[3]]$accession
+
+# temp[temp[, 6] < 0.1, ] = temp[temp[, 4] > 0,]
+# temp = temp[
+#      #temp[, 4] > 0 
+#       temp[, 6] > 0.1
+#      , ]
+# temp = temp[temp[, 2] < 0.58, ]
+# temp = temp[order(as.numeric(temp[, 4]) + as.numeric(temp[, 3]) - as.numeric(temp[, 2]), decreasing = T ),]
+# temp = temp[as.numeric(temp[, 4]) + as.numeric(temp[, 3]) - as.numeric(temp[, 2])>1, ]
+# temp = temp[, 1]
+
+df = temp
+write.xlsx(df, paste0("uniquely up", hour, ".xlsx"), col.names = T, row.names = F)
+
+
+
+
+df = genes.info(as.character(temp$accession), hour,linear = T, mock =T)
+write.xlsx(df, paste0("uniquely up", hour, ".xlsx"), sheetName = "", col.names = T, row.names = T, append = T)
+
+
+#Instead of just comparing to an environment of DEGs this allow comparison to all genes (which have an average expression >10 reads).
+totalGenes = rownames(comp$ypst_ymg)
+geneList = as.integer(totalGenes %in% temp$accession)
+names(geneList) = totalGenes
+sum(geneList)
+geneList = as.factor(geneList)
+
+#Does the GO enrichment (BP, MF, or CC)
+GOdata <- new("topGOdata",
+              ontology = "MF", 
+              allGenes = geneList,  
+              annotationFun = annFUN.gene2GO, 
+              gene2GO = gene_GO) 
+
+fisher_test <- new("classicCount", testStatistic = GOFisherTest, name = "fisher_test")
+fisher_GO <- getSigGroups(GOdata, fisher_test)
+fisher_GO
+
+#Lets see the most significant ones
+table_GO <- GenTable(GOdata, Fisher = fisher_GO, topNodes = 50)
+table_GO #A table of significant terms
+
+#A tree of the significant terms
+par(cex = 0.2)
+showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 15, useInfo = 'all')
+
+#GO term -> significant genes in goi list
+allGO = genesInTerm(GOdata)
+sigGenes = lapply(allGO,function(x) x[x %in% names(geneList[geneList==1])] )
+objectSymbol[sigGenes[["GO:0140096"]]]

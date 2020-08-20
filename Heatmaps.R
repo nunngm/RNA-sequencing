@@ -12,6 +12,11 @@ library(ggrepel)
 library(NMF)
 library(GenAnalysis)
 
+#install packages
+install.packages("devtools")
+library(devtools)
+install_github("nickytong/GenAnalysis")
+
 
 hmcol = hcl_palettes(palette = "Berlin") #Setting the colour palatte
 for_pca <- rlog(allData, blind=F)
@@ -95,9 +100,9 @@ sig <- sig[complete.cases(sig)] #Removing incomplete rows (causes a ton of probl
 sig = sig[sig<0.05] #Keep genes with p-val <0.05
 
 
-sub_24 = c(9,3,12,6) #samples collected at 24 hpi
-sub_12 =c(8,2,11,5) #samples at 12 hpi
-sub_0 = c(7,1,10,4) #Samples at 0 hpi
+sub_24 = c(9, 12, 3, 6) #samples collected at 24 hpi
+sub_12 =c(8, 11, 2, 5) #samples at 12 hpi
+sub_0 = c(7, 10, 1, 4) #Samples at 0 hpi
 model_graph = c(7:9,1:3,10:12,4:6) #in order M mock 0-24 hpi, M Pst 0-24 hpi, young mock 0-24 hpi, young pst 0-24 hpi
 full = c(7,1,10,4,8,2,11,5,9,3,12,6)
 byage = c(7,10,1,4,8,11,2,5,9,12,3,6)
@@ -105,11 +110,25 @@ full = c(7:12,1:6)
 pst = c(10:12,4:6)
 ##-----------------------------This is BROKEN and outputs uninterpreted results because the count # is logged and THEN scaled to the mean of the LOG counts this just screws with everything. To do this better it should use normalised counts and not scale the result.
 #Additionally I would redo the analysis for genes so it was shrunk and pick all DEGs across all the time points then put them into 1 figure of Y.Mock, Y.Pst, M.Mock, M.Pst (Y.Pst-Y.Mock, M.Mock-Y.Mock, M.Pst-Y.Mock.)
-hm_mat_DGEgenes = log_norm_counts[names(sig),sub_24] #Select only genes that were significantly differentially expressed at the for the indicated subgroup (ie 24 hpi)
-rownames(hm_mat_DGEgenes) = objectSymbol[names(sig)] #use object symbol to replace accession #s with gene names where possible
-hm_mat_DGEgenes =hm_mat_DGEgenes[rowSums(hm_mat_DGEgenes)!=0,]
+hm_mat_DGEgenes = log_norm_counts[names(sig), sub_12] #Select only genes that were significantly differentially expressed at the for the indicated subgroup (ie 24 hpi)
+rownames(hm_mat_DGEgenes) = unlist(lapply(names(sig), getGeneName))#use object symbol to replace accession #s with gene names where possible
+hm_mat_DGEgenes =hm_mat_DGEgenes[rowSums(hm_mat_DGEgenes)!=0, ]
+hm_mat_DGEgenes = hm_mat_DGEgenes[,2:4] - hm_mat_DGEgenes[,1]
 
-hmcol = diverge_hcl(20,h = c(240,70),l = c(100,0),c=250,power = 3) #Selecting colours for the hierarchical cluster
+tiff("rplot.tiff", width = 2000, height = 4000)
+aheatmap(hm_mat_DGEgenes, color = hmcol, Rowv = T, Colv = T, distfun= "euclidean",treeheight = 20,hclustfun = "average", scale = "none", cellwidth = 40, breaks = 0)
+     dev.off()
+
+pdf()
+heatmap.2(temp, Rowv=T, Colv = T,
+     trace="none", col = hmcol,
+     lhei = c(1,8), lwid = c(0.5,4),
+     cexRow = 0.25, cexCol = 2,
+           margin=c(10,9))
+dev.off()
+
+hmcol = diverge_hcl(21,h = c(240,70),l = c(100,0),c=250,power = 1.5) #Selecting colours for the hierarchical cluster
+show_col(hmcol)
 
 #Generating the heatmap
 p=GenAnalysis::aheatmap(hm_mat_DGEgenes,color = hmcol, midpoint = 0,
@@ -137,7 +156,7 @@ gene = unique(gene_associations$DB_Object_ID[gene_associations$GO_ID=="GO:000975
 gene = gene[nchar(gene)==9] #Accesion #s are 9 character so anything not that length is booted
 
 #Collect the log counts for genes of interest
-hm_mat_DGEgenes = log_norm_counts[rownames(log_norm_counts) %in% gene,sub_24] #Uses dyplr to select rows of log_norm_counts where were found in the gene list created above
+hm_mat_DGEgenes = log_norm_counts[rownames(log_norm_counts) %in% gene,] #Uses dyplr to select rows of log_norm_counts where were found in the gene list created above
 hm_mat_DGEgenes =hm_mat_DGEgenes[rowSums(hm_mat_DGEgenes)!=0,]
 gene = rownames(hm_mat_DGEgenes)
 rownames(hm_mat_DGEgenes) = objectSymbol[rownames(hm_mat_DGEgenes)]
@@ -191,7 +210,12 @@ gene = rownames( res_mVa_12h[1:20,])
 DGEgenes = subset(res_mVa_12h,padj<0.05)
 DGEgenes = rownames(subset(DGEgenes,abs( log2FoldChange)>2))
 hm_mat_DGEgenes = log_norm_counts[DGEgenes,sub_24]
-aheatmap(hm_mat_DGEgenes, Rowv = T, Colv = T, distfun= "euclidean",treeheight = 20,hclustfun = "average", scale = "row", cellwidth = 40)
+
+tiff("rplot.tiff", width = 2000, height = 4000)
+
+# 3. Close the file
+dev.off()
+aheatmap(hm_mat_DGEgenes, Rowv = T, Colv = T, distfun= "euclidean",treeheight = 20,hclustfun = "average", scale = "none", cellwidth = 40)
 
 p_fake <- rbeta(32833, 1,1) # you could also use runif(12627,1,1)
 hist(p_fake, ylim=c (0,2500))

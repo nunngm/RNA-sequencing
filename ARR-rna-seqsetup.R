@@ -168,38 +168,38 @@ res_pst = temp
 remove(temp)
 
 ##Collect up and down genes
-y_up = res_y[res_y$log2FoldChange > 0,]$padj #collect genes where fold change is positive (up-regulated)
-names(y_up) <- rownames(res_y[res_y$log2FoldChange > 0,]) #collect the genenames
-y_up <- y_up[complete.cases(y_up)] #remove any NAs
-
-y_down = res_y[res_y$log2FoldChange < 0,]$padj #see above but for down-reg genes
-names(y_down) <- rownames(res_y[res_y$log2FoldChange < 0,]) 
-y_down <- y_down[complete.cases(y_down)]
-
-m_up = res_m[res_m$log2FoldChange > 0,]$padj 
-names(m_up) <- rownames(res_m[res_m$log2FoldChange > 0,]) 
-m_up <- m_up[complete.cases(m_up)]
-
-m_down = res_m[res_m$log2FoldChange < 0,]$padj 
-names(m_down) <- rownames(res_m[res_m$log2FoldChange < 0,]) 
-m_down <- m_down[complete.cases(m_down)]
-
-mock_up = res_mock[res_mock$log2FoldChange > 0,]$padj #collect genes where fold change is positive (up-regulated)
-names(mock_up) <- rownames(res_mock[res_mock$log2FoldChange > 0,]) #collect the genenames
-mock_up <- mock_up[complete.cases(mock_up)]
-
-mock_down = res_mock[res_mock$log2FoldChange > 0,]$padj #collect genes where fold change is positive (up-regulated)
-names(mock_down) <- rownames(res_mock[res_mock$log2FoldChange > 0,]) #collect the genenames
-mock_down <- mock_down[complete.cases(mock_down)]
-
-pst_up = res_pst[res_pst$log2FoldChange > 0, ]$padj
-names(pst_up) = rownames(res_pst[res_pst$log2FoldChange > 0, ])
-pst_up = pst_up[complete.cases(pst_up)]
-
-pst_down = res_pst[res_pst$log2FoldChange > 0, ]$padj
-names(pst_down) = rownames(res_pst[res_pst$log2FoldChange > 0, ])
-pst_down = pst_down[complete.cases(pst_down)]
-
+# y_up = res_y[res_y$log2FoldChange > 0,]$padj #collect genes where fold change is positive (up-regulated)
+# names(y_up) <- rownames(res_y[res_y$log2FoldChange > 0,]) #collect the genenames
+# y_up <- y_up[complete.cases(y_up)] #remove any NAs
+# 
+# y_down = res_y[res_y$log2FoldChange < 0,]$padj #see above but for down-reg genes
+# names(y_down) <- rownames(res_y[res_y$log2FoldChange < 0,]) 
+# y_down <- y_down[complete.cases(y_down)]
+# 
+# m_up = res_m[res_m$log2FoldChange > 0,]$padj 
+# names(m_up) <- rownames(res_m[res_m$log2FoldChange > 0,]) 
+# m_up <- m_up[complete.cases(m_up)]
+# 
+# m_down = res_m[res_m$log2FoldChange < 0,]$padj 
+# names(m_down) <- rownames(res_m[res_m$log2FoldChange < 0,]) 
+# m_down <- m_down[complete.cases(m_down)]
+# 
+# mock_up = res_mock[res_mock$log2FoldChange > 0,]$padj #collect genes where fold change is positive (up-regulated)
+# names(mock_up) <- rownames(res_mock[res_mock$log2FoldChange > 0,]) #collect the genenames
+# mock_up <- mock_up[complete.cases(mock_up)]
+# 
+# mock_down = res_mock[res_mock$log2FoldChange > 0,]$padj #collect genes where fold change is positive (up-regulated)
+# names(mock_down) <- rownames(res_mock[res_mock$log2FoldChange > 0,]) #collect the genenames
+# mock_down <- mock_down[complete.cases(mock_down)]
+# 
+# pst_up = res_pst[res_pst$log2FoldChange > 0, ]$padj
+# names(pst_up) = rownames(res_pst[res_pst$log2FoldChange > 0, ])
+# pst_up = pst_up[complete.cases(pst_up)]
+# 
+# pst_down = res_pst[res_pst$log2FoldChange > 0, ]$padj
+# names(pst_down) = rownames(res_pst[res_pst$log2FoldChange > 0, ])
+# pst_down = pst_down[complete.cases(pst_down)]
+# 
 
 
 gene_descriptions = read.delim("gene_description.delim",sep = "\t",header = FALSE,stringsAsFactors = F,quote = "") 
@@ -219,11 +219,22 @@ names(objectSymbol) = unique(gene_associations$DB_Object_ID)
 objectSymbol = unlist2(objectSymbol)
 objectSymbol = objectSymbol[unique(names(objectSymbol))]
 
+getGeneName = function(x){
+     temp = objectSymbol[x]
+     if (is.na(temp)==T){
+          return(x)
+     }
+     return(temp)
+}
 countMean = res_y$baseMean
 names(countMean) = rownames(res_y)
 
-genes.info = function(lst, hpi, linear = T){
+genes.info = function(lst, hpi, linear = T, mock = F){
      hpi = as.character(hpi)
+     
+     comp = compare.group(hpi = hpi)
+     names(comp) = c("ypst_ymg", "mpst_mmg", "mmg_ymg", "mpst_ypst")
+     
      res_y= results(allData,contrast = c("group", paste0("ypst", hpi), paste0("ymg", hpi)), alpha = 0.05, pAdjustMethod="BH")
      temp = as.data.frame(res_y@listData)
      rownames(temp) = res_y@rownames
@@ -233,12 +244,34 @@ genes.info = function(lst, hpi, linear = T){
      temp = as.data.frame(res_m@listData)
      rownames(temp) = res_m@rownames
      res_m = temp
+     
      yfc = res_y$log2FoldChange[rownames(res_y) %in% lst]
      mfc = res_m$log2FoldChange[rownames(res_m) %in% lst]
+     
      
      if (linear == T){
           yfc = log2linear(yfc)
           mfc = log2linear(mfc)
+     }
+     if (mock == T){
+          res_mock = results(allData,contrast = c("group", paste0("mmg", hpi), paste0("ymg", hpi)),alpha =0.05, pAdjustMethod = "BH")
+          temp = as.data.frame(res_mock@listData)
+          rownames(temp) = res_mock@rownames
+          res_mock = temp
+          mockfc = res_mock$log2FoldChange[rownames(res_mock) %in% lst]
+          if (linear ==T){
+               mockfc = log2linear(mockfc)
+          }
+          df = cbind(lst, 
+               objectSymbol[lst], 
+               countMean[lst], 
+               yfc, 
+               mockfc, 
+               mfc, 
+               desvec[lst]
+          )
+          colnames(df) = c("Accession", "Gene name", "Mean count", "Y.Pst-Y.Mock LFC", "M.Mock-Y.Mock LFC", "M.Pst-M.Mock LFC", "Gene description")
+          return(df)
      }
      
      df = cbind(lst, 
@@ -341,4 +374,35 @@ log2linear = function(lfc){
           return(temp)
      })
      return(unlist(lfc))
+}
+
+
+get.path = function(){
+     return(paste(scan("clipboard", what = "string", sep = "\\"), collapse = "/"))
+}
+
+find.unique = function(hpi){
+     comp = compare.group(hpi = hpi)
+     names(comp) = c("ypst_ymg", "mpst_mmg", "mmg_ymg", "mpst_ypst")
+     temp = cbind( comp$ypst_ymg$log2FoldChange, comp$mmg_ymg$log2FoldChange, comp$mpst_mmg$log2FoldChange)
+     pvals = cbind(comp$mmg_ymg$padj, comp$mpst_mmg$padj, comp$ypst_ymg$padj)
+     
+     for (i in 1:nrow(pvals)){
+          pvals[i, 1] = -2*sum(log(pvals[i, ]))
+          pvals[i,1] = 1-pchisq(pvals[i,1], 2*length(pvals[i, ]))
+     }
+     temp = cbind(rownames(comp$ypst_ymg), temp, pvals[ ,1], pvals[, 2], pvals[, 3])
+     colnames(temp) = c("accession", "ypst_ymg", "mmg_ymg", "mpst_mmg", "qval", "qmpst", "qypst")
+     temp = as.data.frame(temp)
+     for (i in 2:ncol(temp)){
+          temp[, i] = as.numeric(as.character(temp[, i]))
+     }
+     
+     
+     temp = subset(temp, mpst_mmg > 0 & qmpst < 0.05)
+     temp = subset(temp, ypst_ymg < 0 | qypst > 0.05)
+     temp = subset(temp, mmg_ymg + mpst_mmg - ypst_ymg > log2(1.5))
+     temp = temp[order(temp$mmg_ymg + temp$mpst_mmg - temp$ypst_ymg, decreasing = T), ]
+     temp = cbind(temp, objectSymbol[temp$accession], desvec[temp$accession])
+     return(temp)
 }

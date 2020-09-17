@@ -381,7 +381,7 @@ get.path = function(){
      return(paste(scan("clipboard", what = "string", sep = "\\"), collapse = "/"))
 }
 
-find.unique = function(hpi){
+find.unique = function(hpi, reverse = F ){
      comp = compare.group(hpi = hpi)
      names(comp) = c("ypst_ymg", "mpst_mmg", "mmg_ymg", "mpst_ypst")
      temp = cbind( comp$ypst_ymg$log2FoldChange, comp$mmg_ymg$log2FoldChange, comp$mpst_mmg$log2FoldChange)
@@ -398,11 +398,19 @@ find.unique = function(hpi){
           temp[, i] = as.numeric(as.character(temp[, i]))
      }
      
-     
-     temp = subset(temp, mpst_mmg > 0 & qmpst < 0.05)
-     temp = subset(temp, ypst_ymg < 0 | qypst > 0.05)
-     temp = subset(temp, mmg_ymg + mpst_mmg - ypst_ymg > log2(1.5))
-     temp = temp[order(temp$mmg_ymg + temp$mpst_mmg - temp$ypst_ymg, decreasing = T), ]
-     temp = cbind(temp, objectSymbol[temp$accession], desvec[temp$accession])
+     if (reverse == F){
+          temp = subset(temp, mpst_mmg > 0 & qval < 0.05)
+          temp = subset(temp, ypst_ymg < 0 | qypst > 0.05)
+          temp = subset(temp, mmg_ymg + mpst_mmg - ypst_ymg > log2(1.5))
+          temp = temp[order(temp$mmg_ymg + temp$mpst_mmg - temp$ypst_ymg, decreasing = T), ]
+          temp = cbind(temp, objectSymbol[temp$accession], desvec[temp$accession])
+     } else{
+          temp = subset(temp, ypst_ymg > 0 & qypst < 0.05)
+          temp = subset(temp, mpst_mmg < 0 | qmpst > 0.05)
+          temp = subset(temp, ypst_ymg - mmg_ymg - mpst_mmg > log2(1.5))
+          temp = temp[order(temp$ypst_ymg - temp$mmg_ymg - temp$mpst_mmg, decreasing = T), ]
+          temp = cbind(temp, objectSymbol[temp$accession], desvec[temp$accession])
+     }
+
      return(temp)
 }

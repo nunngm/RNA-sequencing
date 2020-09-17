@@ -30,6 +30,7 @@ allGenes = unique(allGenes)
 colors = c("#c3db0f","#2cff21","#6b7fff","#ff4059","#de4dff")
 show_col(colors)
 
+temp = c(tmp)
 #Two-way venn diagram - More useful
 venn.diagram(x = list(sg_y,sg_m),
              category.names = c("pen3 hyperinduced", "Mature uniquely up"),
@@ -66,7 +67,7 @@ geneList2 = as.factor(geneList2)
 
 #Does the GO enrichment (BP, MF, or CC)
 GOdata <- new("topGOdata",
-              ontology = "BP", 
+              ontology = "MF", 
               allGenes = geneList2,  
               annotationFun = annFUN.gene2GO, 
               gene2GO = gene_GO) 
@@ -86,7 +87,7 @@ showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 30, useInfo = 'all')
 #GO term -> significant genes in goi list
 allGO = genesInTerm(GOdata)
 sigGenes = lapply(allGO,function(x) x[x %in% names(geneList[geneList==1])] )
-objectSymbol[sigGenes[["GO:0009626"]]]
+objectSymbol[sigGenes[["GO:0043565"]]]
 
 for (i in 1:length(tmp)){
      df = tmp[[i]]
@@ -94,9 +95,9 @@ for (i in 1:length(tmp)){
           df[,j] = log2linear(df[,j])
      }
      if (i ==1){
-          write.xlsx(df, "temp.xlsx", sheetName = as.character(i), col.names = T, row.names = F)
+          write.xlsx(df, "templax.xlsx", sheetName = as.character(i), col.names = T, row.names = F)
      } else {
-          write.xlsx(df, "temp.xlsx", sheetName = as.character(i), col.names = T, row.names = F, append = T)
+          write.xlsx(df, "templax.xlsx", sheetName = as.character(i), col.names = T, row.names = F, append = T)
      }
 }
 
@@ -243,8 +244,10 @@ venn = draw.triple.venn(427,144,3705,2,35,318,2,category = c("Y.Pst>Y.Mock","M.P
 geneList = as.integer(allGenes %in% temp[[2]])
 names(geneList) = allGenes
 geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% temp[[3]])
-geneList[geneList==1] = as.integer(! names(geneList[geneList==1])%in% temp[[1]])
+geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% temp[[1]])
 sum(geneList)
+
+getGeneName(names(geneList[geneList==1]))
 
 geneList2 = as.factor(geneList)
 
@@ -279,7 +282,7 @@ showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 20, useInfo = 'all')
 #GO term -> significant genes in goi list
 allGO = genesInTerm(GOdata)
 sigGenes = lapply(allGO,function(x) x[x %in% names(geneList[geneList==1])] )
-objectSymbol[sigGenes[["GO:0006952"]]]
+objectSymbol[sigGenes[["GO:0005634"]]]
 
 objectSymbol[names(geneList[geneList==1])]
 

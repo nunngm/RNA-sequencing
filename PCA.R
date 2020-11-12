@@ -22,7 +22,7 @@ p =p+geom_point(aes(size=1)) +guides(colour = guide_legend(override.aes = list(s
     axis.text = element_text(size=15),
     legend.text = element_text(size=15)
 )
-
+p
 ggsave("myplot.pdf",plot = p) #output the PCA plot
 pdf("silly.pdf")
 
@@ -52,8 +52,8 @@ group <- if (length("group") > 1) {
 }
 
 #Selecting the principle components
-pc_x = 3
-pc_y = 4
+pc_x = 1
+pc_y = 2
 d <- data.frame(PC1 = pca$x[, pc_x], PC2 = pca$x[, pc_y], 
                 group = intgroup_df, 
                 age = colData(for_pca)[,1],
@@ -71,8 +71,14 @@ temp = lapply(temp, function(x){tmp = if (x>2){
 })
 temp =unlist(temp)
 
+
+
 #Drawing the PCA plot and demonstrating variance
-ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = "hpi")) + geom_point(size = 4,shape =temp,stroke = 1.5) + xlab(paste0("PC ",pc_x," (", round(percentVar[pc_x] * 100), "% variance)")) + ylab(paste0("PC ",pc_y," (", round(percentVar[pc_y] * 100), "% variance)")) + coord_fixed() +theme(panel.grid.major = element_blank(), 
+
+ #prints to tiff
+
+ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = "hpi")) + geom_point(size = 4,shape =temp, stroke = 1.5) +  xlab(paste0("PC ",pc_x," (", round(percentVar[pc_x] * 100), "% variance)")) + ylab(paste0("PC ",pc_y," (", round(percentVar[pc_y] * 100), "% variance)")) + 
+    coord_fixed() +theme(panel.grid.major = element_blank(), 
     panel.grid.minor = element_blank(),
     panel.background = element_blank(), 
     axis.line = element_line(colour = "black", size=1),
@@ -85,5 +91,28 @@ ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = "hpi")) + geom_point(s
     axis.text = element_text(size=15),
 )
 
-ggsave("temp.png")
+
+
+as.factor(paste0(d$inf,d$age, d$hpi))
+transparency = c(rep(1,3), rep(1,3),rep(1,3), 
+                 rep(1,3), rep(1,3),rep(1,3), 
+                 rep(1,3), rep(1,3),rep(1,3), 
+                 rep(1,3), rep(1,3),rep(1,3))
+
+tiff(filename = "PCA_012h.tiff", height = 2000, width = 2000) #opens a tiff device
+ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = "hpi")) + geom_point(size = 20,shape =temp, stroke = 6, alpha = transparency) +  xlab("") + ylab("") + coord_fixed() +theme(panel.grid.major = element_blank(), 
+                       panel.grid.minor = element_blank(),
+                       panel.background = element_blank(), 
+                       axis.line = element_line(colour = "black", size=4),
+                       axis.title.x=element_text(size=15),
+                       #axis.text.x=element_blank()),
+                       axis.ticks=element_line(colour = "black", size =4),
+                       axis.ticks.length = unit(20,"points") ,
+                       axis.title.y = element_text(size=15),
+                       legend.position = "right",
+                       axis.text = element_text(size= 75),
+  )
+dev.off()
+
+ggsave("makegraph_noPoints.png")
 pdf("myplots.pdf")

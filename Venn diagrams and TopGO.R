@@ -1,6 +1,6 @@
 #Set the
 hp = "24"
-res = compare.group(hp)
+res = compare.group(hpi= "24")
 res[[2]]
 
 y_up = res_y[res_y$log2FoldChange > 0,]$padj #collect genes where fold change is positive (up-regulated)
@@ -220,6 +220,9 @@ write.csv(venn,"temp.csv")
 # Thre-way venn diagram code
 colors = qualitative_hcl(3, palette = "warm",c = 90)
 show_col(colors)
+hour = c("0", "12", "24")
+tmp = lapply(hour, find.unique)
+temp = tmp
 temp = list(tmp[[1]]$accession, tmp[[2]]$accession, tmp[[3]]$accession)
 allGenes = c(temp[[1]], temp[[2]], temp[[3]])
 allGenes = unique(allGenes)

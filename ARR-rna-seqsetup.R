@@ -16,7 +16,12 @@ library(scales)
 library(xlsx)
 library(stringi)
 
+#laptop directory
 setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-R workshop")
+
+#Desktop directory
+setwd("C:\\Users\\garrett\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-R workshop")
+
 
 gene_associations <- read.delim("gene_association_final.txt", comment.char = "!", header = FALSE, as.is = TRUE) 
 colnames(gene_associations) <- c("DB", "DB_Object_ID", "DB_Object_Symbol", "Qualifier", "GO_ID",
@@ -381,16 +386,16 @@ get.path = function(){
      return(paste(scan("clipboard", what = "string", sep = "\\"), collapse = "/"))
 }
 
-find.unique = function(hpi, reverse = F ){
+find.unique = function(hpi, reverse = F, down = F ){
      comp = compare.group(hpi = hpi)
      names(comp) = c("ypst_ymg", "mpst_mmg", "mmg_ymg", "mpst_ypst")
      temp = cbind( comp$ypst_ymg$log2FoldChange, comp$mmg_ymg$log2FoldChange, comp$mpst_mmg$log2FoldChange)
      pvals = cbind(comp$mmg_ymg$padj, comp$mpst_mmg$padj, comp$ypst_ymg$padj)
      
-     for (i in 1:nrow(pvals)){
-          pvals[i, 1] = -2*sum(log(pvals[i, ]))
-          pvals[i,1] = 1-pchisq(pvals[i,1], 2*length(pvals[i, ]))
-     }
+     # for (i in 1:nrow(pvals)){
+     #      pvals[i, 1] = -2*sum(log(pvals[i, ]))
+     #      pvals[i,1] = 1-pchisq(pvals[i,1], 2*length(pvals[i, ]))
+     # }
      temp = cbind(rownames(comp$ypst_ymg), temp, pvals[ ,1], pvals[, 2], pvals[, 3])
      colnames(temp) = c("accession", "ypst_ymg", "mmg_ymg", "mpst_mmg", "qval", "qmpst", "qypst")
      temp = as.data.frame(temp)
@@ -398,19 +403,61 @@ find.unique = function(hpi, reverse = F ){
           temp[, i] = as.numeric(as.character(temp[, i]))
      }
      
-     if (reverse == F){
-          temp = subset(temp, mpst_mmg > 0 & qval < 0.05)
-          temp = subset(temp, ypst_ymg < 0 | qypst > 0.05)
+     if (reverse == F & down == F){
+          # temp = subset(temp, qval < 0.01 | qmpst < 0.01)
+          temp = subset(temp, qmpst <0.1)
+          temp = subset(temp, mpst_mmg > 0)
+          temp = subset(temp, ypst_ymg < 0 | qypst > 0.1)
           temp = subset(temp, mmg_ymg + mpst_mmg - ypst_ymg > log2(1.5))
           temp = temp[order(temp$mmg_ymg + temp$mpst_mmg - temp$ypst_ymg, decreasing = T), ]
           temp = cbind(temp, objectSymbol[temp$accession], desvec[temp$accession])
-     } else{
+     } else if (reverse == T & down == F){
           temp = subset(temp, ypst_ymg > 0 & qypst < 0.05)
           temp = subset(temp, mpst_mmg < 0 | qmpst > 0.05)
           temp = subset(temp, ypst_ymg - mmg_ymg - mpst_mmg > log2(1.5))
           temp = temp[order(temp$ypst_ymg - temp$mmg_ymg - temp$mpst_mmg, decreasing = T), ]
           temp = cbind(temp, objectSymbol[temp$accession], desvec[temp$accession])
+     } else {
+             temp = subset(temp, qmpst < 0.05)
+             temp = subset(temp, mpst_mmg < 0)
+             temp = subset(temp, ypst_ymg > 0 | qypst >0.05)
+             temp = temp[order(temp$mmg_ymg + temp$mpst_mmg - temp$ypst_ymg, decreasing = F), ]
+             temp = cbind(temp, objectSymbol[temp$accession], desvec[temp$accession])
      }
 
      return(temp)
+}
+
+find.volcano = function(hour, n = 15, de = 0) {
+        temp = compare.group(hpi= hour)
+        data = temp[[4]] #M.Pst-Y.Pst
+        
+        #Select for the genes which are differentially expressed in M.Pst-M.Mock and M.Pst-Y.Pst and remove genes differentially expressed in Y.Pst-Y.Mock. Using the inverse of fisher's method
+        data$padj =  -2*(log(1-temp[[4]]$padj)+log(1-temp[[2]]$padj)+log(temp[[1]]$padj))
+        data$padj =  pchisq(data$padj,2*3) #Uses the inverse of fisher's method to basically discount samples which aren't: 1. Differentiall expressed in mature plants 2. differentially expressed in M.Pst compared to Y.Pst 3. Are not differentially expressed in Y.Pst compared to Y.Mock
+        
+        data$de = "NO" #de = differentially expressed
+        data$de[data$log2FoldChange > 0.585 & data$padj < 0.05] <- "UP"
+        data$de[data$log2FoldChange < -0.585 & data$padj < 0.05] = "DOWN"
+        mycolors <- c("blue", "red", "black")
+        names(mycolors) <- c("DOWN", "UP", "NO")
+        data$gene_symbol = getGeneName(rownames(data))
+        data$gene_symbol[is.na(data$gene_symbol)] = ""
+        data = data[is.na(data$log2FoldChange)==F & is.na(data$padj)==F,]
+        
+        data$delabel = NA
+        n= 15
+        data$delabel[order(data$log2FoldChange * (data$padj <0.05) *(-log10(data$padj)), decreasing = T)][c(1:n,(nrow(data)-(n-1)):nrow(data))] = data$gene_symbol[order(data$log2FoldChange * (data$padj <0.05) *(-log10(data$padj)), decreasing = T)][c(1:n,(nrow(data)-(n-1)):nrow(data))]
+        data = data[order(data$log2FoldChange * (-log10(data$padj)), decreasing = T),]
+        
+        if (de < 0){
+                data = data[order(data$log2FoldChange * (-log10(data$padj)), decreasing = F),]
+                data = rownames(data[data$de == "DOWN", ])
+                
+        } else if(de > 0){
+                data = rownames(data[data$de == "UP", ])
+        }
+        
+        
+        return(data)
 }

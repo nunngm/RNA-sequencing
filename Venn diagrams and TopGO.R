@@ -32,7 +32,10 @@ show_col(colors)
 
 temp = c(tmp)
 #Two-way venn diagram - More useful
-venn.diagram(x = list(sg_y,sg_m),
+
+vennGenes = list(microGenes,mature)
+allGenes = unique(c(vennGenes[[1]], vennGenes[[2]]))
+venn.diagram(x = list(vennGenes[[1]],vennGenes[[2]]),
              category.names = c("pen3 hyperinduced", "Mature uniquely up"),
              filename = "temp.tiff",
              output = T,
@@ -41,16 +44,16 @@ venn.diagram(x = list(sg_y,sg_m),
              imagetype = "tiff",
              scaled = F,
              col = "black",
-             fill = colors[3:4],
+             fill = colors[1:2],
              cat.col = "black",
              cat.cex = 1,
              cat.dist = c(0.16, 0.16),
              margin =0.15)
 
 #Specifies which part of the Venn diagram you would like to complete GO enrichment on
-geneList = as.integer(allGenes %in% sg_y)
+geneList = as.integer(allGenes %in% vennGenes[[1]])
 names(geneList) = allGenes
-geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% sg_m)
+geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% vennGenes[[2]])
 geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% sg_mock)
 sum(geneList)
 
@@ -67,7 +70,7 @@ geneList2 = as.factor(geneList2)
 
 #Does the GO enrichment (BP, MF, or CC)
 GOdata <- new("topGOdata",
-              ontology = "MF", 
+              ontology = "BP", 
               allGenes = geneList2,  
               annotationFun = annFUN.gene2GO, 
               gene2GO = gene_GO) 
@@ -77,7 +80,7 @@ fisher_GO <- getSigGroups(GOdata, fisher_test)
 fisher_GO
 
 #Lets see the most significant ones
-table_GO <- GenTable(GOdata, Fisher = fisher_GO, topNodes = 50)
+table_GO <- GenTable(GOdata, Fisher = fisher_GO, topNodes = 80)
 table_GO #A table of significant terms
 
 #A tree of the significant terms
@@ -86,8 +89,10 @@ showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 30, useInfo = 'all')
 
 #GO term -> significant genes in goi list
 allGO = genesInTerm(GOdata)
-sigGenes = lapply(allGO,function(x) x[x %in% names(geneList[geneList==1])] )
-objectSymbol[sigGenes[["GO:0043565"]]]
+sigGenes = lapply(allGO,function(x) x[x %in% names(geneList2[geneList2==1])] )
+objectSymbol[sigGenes[["GO:0007165"]]]
+
+tmp = data[rownames(data) %in% sigGenes[["GO:0007165"]], ]
 
 for (i in 1:length(tmp)){
      df = tmp[[i]]
@@ -224,11 +229,13 @@ hour = c("0", "12", "24")
 tmp = lapply(hour, find.unique)
 temp = tmp
 temp = list(tmp[[1]]$accession, tmp[[2]]$accession, tmp[[3]]$accession)
+temp = list(microGenes, mature, young)
+
 allGenes = c(temp[[1]], temp[[2]], temp[[3]])
 allGenes = unique(allGenes)
 
 venn.diagram(x = list(temp[[1]], temp[[2]], temp[[3]]),
-             category.names = c("0.25 hpi","12 hpi","24 hpi"),
+             category.names = c("Microarray","M.Pst-M.Mock","Y.Pst-Y.Mock"),
              filename = "temp.tiff",
              output = T,
              imagetype = "tiff",
@@ -244,10 +251,10 @@ venn.diagram(x = list(temp[[1]], temp[[2]], temp[[3]]),
 venn = draw.triple.venn(427,144,3705,2,35,318,2,category = c("Y.Pst>Y.Mock","M.Pst>M.Mock","M.Mock>Y.Mock"),fill = colors,lty=1,cex=2,cat.cex=2,cat.col="black",cat.dist = c(0.12, 0.12,0.04),margin =0.15,euler.d = F,scaled = F)
 
 #Specifies which part of the Venn diagram you would like to complete GO enrichment on
-geneList = as.integer(allGenes %in% temp[[2]])
+geneList = as.integer(allGenes %in% temp[[1]])
 names(geneList) = allGenes
+geneList[geneList==1] = as.integer(! names(geneList[geneList==1])%in% temp[[2]])
 geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% temp[[3]])
-geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% temp[[1]])
 sum(geneList)
 
 getGeneName(names(geneList[geneList==1]))

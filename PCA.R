@@ -99,7 +99,7 @@ transparency = c(rep(1,3), rep(1,3),rep(1,3),
                  rep(1,3), rep(1,3),rep(1,3), 
                  rep(1,3), rep(1,3),rep(1,3))
 
-tiff(filename = "PCA_012h.tiff", height = 2000, width = 2000) #opens a tiff device
+tiff(filename = "PCA_microarray.tiff", height = 2000, width = 2000) #opens a tiff device
 ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = "hpi")) + geom_point(size = 20,shape =temp, stroke = 6, alpha = transparency) +  xlab("") + ylab("") + coord_fixed() +theme(panel.grid.major = element_blank(), 
                        panel.grid.minor = element_blank(),
                        panel.background = element_blank(), 

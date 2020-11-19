@@ -11,7 +11,7 @@ library(affy)
 
 library(Biobase)
 library(GEOquery)
-setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Investigations\\PEN3")
+setwd("C:\\Users\\garrett\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Investigations\\PEN3")
 # load series and platform data from GEO
 
 gset <- getGEO("GSE3220", GSEMatrix =TRUE, getGPL=FALSE)
@@ -26,7 +26,7 @@ title <- paste ("GSE3220", '/', annotation(gset), " selected samples", sep ='')
 boxplot(exprs(gset), boxwex=0.7, notch=T, main=title, outline=FALSE, las=2) #test if expression is log transformed
 
 #if not log transformed DO THIS!!! If you don't your results will be crazy since limma assumes you are feeding log-transformed data into it so it will output the linear form == insanity
-exprs(gset) = log2(exprs(gset))
+data = exprs(gset) = log2(exprs(gset))
 
 #Function to convert a microarray element to an accession number -> tag the accession number(s) with description(s) and object symbol(s)
 splitFind = function(x){

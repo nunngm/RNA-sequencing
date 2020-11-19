@@ -91,6 +91,7 @@ design_full
 ##very general model that just has all the sample information
 model_full <- formula(~age+infection+hpi)
 
+
 rawData <- DESeqDataSetFromHTSeqCount(design_full,design=model_full)
 rawData$infection = factor(rawData$infection, levels =  c("mg","pst"))
 rawData$hpi = factor(rawData$hpi, levels = c("0","12","24"))
@@ -100,13 +101,13 @@ rawData$age = factor(rawData$age, levels = c("y","m"))
 ## This allows us to pick our treatment group (ie ymg0h rather than all of each type (all of 0 hpi or all of youbg or all of mock))
 rawData$group <- factor(paste0(rawData$age,rawData$infection,rawData$hpi))
 rawData$group = factor(rawData$group,levels=c("ymg0","ymg12","ymg24","ypst0","ypst12","ypst24","mmg0","mmg12","mmg24","mpst0","mpst12","mpst24"))
+
 keep <- rowSums(counts(rawData)) >= 360
 rawData <- rawData[keep,]
 
 #Lets redi the model design to encompass every sample individually
 rawData@design = ~group
 allData <- DESeq(rawData)
-
 
 ##A really nice function (if a little messy) that completes the important comparisons (as I see it) by setting the constant 
 #ie if you set the age to "y" then it will complete ypst - ymg at everytimepoint
@@ -338,7 +339,7 @@ view.gene = function(accession, fileName = objectSymbol[toupper(accession)], gra
      colnames(geneCount)[ncol(geneCount)] = "ageinf"
      
      p = ggplot(geneCount,
-       aes(x = hpi, y = count, color = age, lty = infection, group = ageinf)) +
+       aes(x = hpi, y = count, color = factor(age, levels = c("y", "m")), lty = factor(infection, levels = c("mg", "pst")), group = ageinf )) +
           #geom_point() + #displays individual counts
           stat_summary(fun=mean, geom="line", size = 1) + 
           stat_summary(fun = mean,
@@ -461,3 +462,61 @@ find.volcano = function(hour, n = 15, de = 0) {
         
         return(data)
 }
+
+# #Playing around with contrasts for timepoint analysis
+# targets = as.data.frame(cbind(c("f1", "f2", "f3", "f4", "f5", "f6"), c("wt.0h", "wt.6h", "wt.24h", "mut.0h", "mut.6h", "mut.24h")))
+# colnames(targets) = c("FileName", "Targets")
+# lev <- c("wt.0h","wt.6h","wt.24h","mut.0h","mut.6h","mut.24h")
+# f <- factor(targets$Target, levels=lev)
+# design <- model.matrix(~0+f)
+# colnames(design) <- lev
+# fit <- lmFit(eset, design)
+# 
+# 
+# cont.dif <- makeContrasts(
+#          Dif6hr =(mu.6hr-mu.0hr)-(wt.6hr-wt.0hr),
+#          Dif24hr=(mu.24hr-mu.6hr)-(wt.24hr-wt.6hr),
+#          levels=design)
+# fit2 <- contrasts.fit(fit, cont.dif)
+# fit2 <- eBayes(fit2)
+# topTable(fit2, adjust="BH")
+# 
+# 
+# 
+# files <- file.path("counts", list.files("counts"))
+# samples <- c("m_mg_0h_s1", "m_mg_0h_s2","m_mg_0h_s3","m_mg_12h_s1","m_mg_12h_s2","m_mg_12h_s3","m_mg_24h_s1","m_mg_24h_s2","m_mg_24h_s3","m_pst_0h_s1","m_pst_0h_s2","m_pst_0h_s3","m_pst_12h_s1","m_pst_12h_s2","m_pst_12h_s3","m_pst_24h_s1","m_pst_24h_s2","m_pst_24h_s3","y_mg_0h_s1","y_mg_0h_s2","y_mg_0h_s3","y_mg_12h_s1","y_mg_12h_s2","y_mg_12h_s3","y_mg_24h_s1","y_mg_24h_s2","y_mg_24h_s3","y_pst_0h_s1","y_pst_0h_s2","y_pst_0h_s3","y_pst_12h_s1","y_pst_12h_s2","y_pst_12h_s3","y_pst_24h_s1","y_pst_24h_s2","y_pst_24h_s3")
+# names(files) <- samples
+# 
+# ##Full data set
+# infection = c(rep("mg",9),rep("pst",9),rep("mg",9),rep("pst",9))
+# infection <- as.factor(infection)
+# length(infection)
+# 
+# hpi = c(rep(0,3),rep(12,3),rep(24,3))
+# hpi = c(hpi,hpi,hpi,hpi)
+# hpi = as.factor(hpi)
+# length(hpi)
+# 
+# age = c(rep("m",18),rep("y",18))
+# age = as.factor(age)
+# length(age)
+# 
+# 
+# design_full <- data.frame(file=files,
+#                           age=age,
+#                           infection =infection,
+#                           hpi=hpi,
+#                           factor(paste(design_full$age, design_full$infection, design_full$hpi, sep = "_"))
+# )
+# temp = cbind(design_full, pas)
+# colnames(design_full)[length(colnames(design_full))] = "treatment"
+# design_full
+# 
+# 
+# cont.totdif <- makeContrasts(
+#         Dif12hr = ((m_pst_12-m_pst_0)-(m_mg_12-m_mg_0))-((y_pst_12-y_pst_0)-(y_mg_12-y_mg_0)),
+#         Dif24hr = ((m_pst_24-m_pst_12)-(m_mg_24-m_mg_12))-((y_pst_24-y_pst_12)-(y_mg_24-y_mg_12)),
+#         levels=design)
+# fit2 <- contrasts.fit(fit, cont.dif)
+# fit2 <- eBayes(fit2)
+# topTable(fit2, adjust="BH")

@@ -19,10 +19,10 @@ data$gene_symbol[is.na(data$gene_symbol)] = ""
 data = data[is.na(data$log2FoldChange)==F & is.na(data$padj)==F,]
 
 data$delabel = NA
-n= 15
+n= 30
 data$delabel[order(data$log2FoldChange * (data$padj <0.05) *(-log10(data$padj)), decreasing = T)][c(1:n,(nrow(data)-(n-1)):nrow(data))] = data$gene_symbol[order(data$log2FoldChange * (data$padj <0.05) *(-log10(data$padj)), decreasing = T)][c(1:n,(nrow(data)-(n-1)):nrow(data))]
 
-
+data = res2
 
 # [data$de != "NO",][c(1:25, (nrow(data)-24):nrow(data)),]
 # 

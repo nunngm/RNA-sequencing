@@ -4,7 +4,6 @@
 options(java.parameters = "-Xmx1024m")
 library(DESeq2)
 library(RCurl)
-library(tximport)
 library(readr)
 library("RColorBrewer")
 library(gplots)
@@ -90,6 +89,7 @@ rawData$group = factor(rawData$group,levels=c("ymg0","ymg12","ymg24","ypst0","yp
 
 # Filter lowly expressed genes
 keep <- rowMeans(counts(rawData)) >= 10 #Genes which on average have less than 10 reads
+#keep = rowMeans(counts(rawData)[, 1:18]) >=10 &rowMeans(counts(rawData)[, 19:36]) >=10
 rawData <- rawData[keep,]
 
 # Build DESeq object based on distinct treatment groups
@@ -99,24 +99,24 @@ allData <- DESeq(rawData)
 ##A really nice function (if a little messy) that completes only the comparisons you deem relevent but does not compare between timepoints
         #ie if you set the age to "y" then it will complete ypst - ymg at every time point
 compare.group = function(age = c("y", "m"), infection = c("mg", "pst"), hpi = c("0", "12", "24")){
-     temp = lapply(age, function(x){tmp = paste0(x,infection)
+     compGroups = lapply(age, function(x){tmp = paste0(x,infection)
                     return(tmp)
            })
-     for (i in 1:length(temp)){
-          temp[[i]] = lapply(temp[[i]], function(x){tmp = paste0(x, hpi)
+     for (i in 1:length(compGroups)){
+          compGroups[[i]] = lapply(compGroups[[i]], function(x){tmp = paste0(x, hpi)
                               return(tmp)
           })
      }
      out = character()
-     for (i in 1:length(temp[[1]][[1]])){
-          if(length(temp[[1]]) > 1){
-               for (j in 1:length(temp)){
-                    out = rbind(out, c(temp[[j]][[2]][i], temp[[j]][[1]][i]))
+     for (i in 1:length(compGroups[[1]][[1]])){
+          if(length(compGroups[[1]]) > 1){
+               for (j in 1:length(compGroups)){
+                    out = rbind(out, c(compGroups[[j]][[2]][i], compGroups[[j]][[1]][i]))
                }
           }
-          if (length(temp) > 1){
-               for (j in 1:length(temp[[1]])){
-                    out = rbind(out, c(temp[[2]][[j]][i], temp[[1]][[j]][i]))
+          if (length(compGroups) > 1){
+               for (j in 1:length(compGroups[[1]])){
+                    out = rbind(out, c(compGroups[[2]][[j]][i], compGroups[[1]][[j]][i]))
                }
           }
      }
@@ -124,10 +124,8 @@ compare.group = function(age = c("y", "m"), infection = c("mg", "pst"), hpi = c(
      final = list()
      for (i in 1:nrow(out)){
           tmp = results(allData,contrast = c("group", out[i, 1], out[i, 2]), alpha = 0.05, pAdjustMethod="BH")
-          temp = as.data.frame(tmp@listData)
-          rownames(temp) = tmp@rownames
-          remove(tmp)
-          final[[i]] = temp
+          tmp = as.data.frame(tmp@listData, row.names = tmp@rownames)
+          final[[i]] = tmp
      }
      names(final) = paste0(out[,1], out[,2])
      return(final)

@@ -35,7 +35,7 @@ data = res2
 # 
 # 
 # data$delabel[data$de != "NO"] = data$gene_symbol[data$de != "NO"]
-data = find.volcano("24")
+data = find.volcano("12")
 hour = c("0", "12", "24")
 tmp = lapply(hour, find.volcano, de =1)
 

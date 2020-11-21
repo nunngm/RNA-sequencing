@@ -15,10 +15,11 @@ library(RColorBrewer)
 library(topGO)
 library(WriteXLS)
 library(zoo)
-# somethings depend on deseq2_drought
-# uncomment if you want to source this file
-#source("deseq2_drought.R)
-
+# # somethings depend on: ARR-rna-seqsetup.R
+# # uncomment if you want to source this file
+# setwd("C:/Users/Garrett/Documents/Local Git/RNA-sequencing")
+# source("ARR-rna-seqsetup.R")
+allgenes = counts(allData)
 
 allowWGCNAThreads()
 options(stringsAsFactors = FALSE)

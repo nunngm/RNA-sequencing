@@ -19,25 +19,26 @@ library(zoo)
 # # uncomment if you want to source this file
 # setwd("C:/Users/Garrett/Documents/Local Git/RNA-sequencing")
 # source("ARR-rna-seqsetup.R")
-allgenes = counts(allData)
+allgenes = counts(allData, normalized = T)
 
 allowWGCNAThreads()
 options(stringsAsFactors = FALSE)
 
 gsg <- goodSamplesGenes(t(allgenes), verbose = 3);
 gsg$allOK
-allgenes <- t(allgenes)
-sampleTree = hclust(dist(allgenes), method = "average")
+# allgenes <- t(allgenes)
+sampleTree = hclust(dist(t(allgenes)), method = "average")
 
-## Plot the sample tree: Open a graphic output window of size 12 by 9 inches
-## The user should change the dimensions if the window is too large or too small.
-#sizeGrWindow(12,9)
-##pdf(file = "Plots/sampleClustering.pdf", width = 12, height = 9);
-#par(cex = 0.6);
-#par(mar = c(0,4,2,0))
-#plot(sampleTree, main = "Sample clustering to detect outliers", sub="", xlab="", cex.lab = 1.5,
-#     cex.axis = 1.5, cex.main = 2)
-#
+# Plot the sample tree: Open a graphic output window of size 12 by 9 inches
+# The user should change the dimensions if the window is too large or too small.
+sizeGrWindow(12,9)
+pdf(file = "sampleClustering.pdf", width = 12, height = 9);
+par(cex = 0.6);
+par(mar = c(0,4,2,0));
+par(mfrow = c(1,1))
+plot(sampleTree, main = "Sample clustering to detect outliers", sub="", xlab="", cex.lab = 1.5,
+    cex.axis = 1.5, cex.main = 2)
+dev.off()
 ## Choose a set of soft-thresholding powers
 powers = c(c(1:10), seq(from = 12, to=20, by=2))
 # Call the network topology analysis function
@@ -65,7 +66,7 @@ text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
 ## 8 looks like a good fit
 
 # need to do it block wise because my computer doesnt have enough RAM for this
-network = blockwiseModules(t(allgenes), power = 8,
+network = blockwiseModules(t(allgenes), power = 5,
                            TOMType = "none",
                            networkType = "signed hybrid",
                            randomSeed = 319, corType = "pearson", 
@@ -77,8 +78,8 @@ network = blockwiseModules(t(allgenes), power = 8,
                            verbose = 3, maxBlockSize = 10000)
 
 ## if you save this, it is much quicker to run
-#save.image("blockwiseNetwork.RData")
-load("~/Documents/Manuscripts/drought/scripts/blockwiseNetwork.RData")
+save.image("blockwiseNetwork.RData")
+load("blockwiseNetwork.RData")
 
 
 clustcolours <- labels2colors(network$colors)
@@ -92,14 +93,19 @@ nSamples = ncol(allgenes);
 # Recalculate MEs with color labels
 MEs0 = moduleEigengenes(t(allgenes), clustcolours)$eigengenes
 MEs = orderMEs(MEs0)
-ecotype_condition <- c(rep("YWW1", 4), 
-                       rep("YD1", 3),
-                       rep("YWW2", 4),
-                       rep("YD2", 4),
-                       rep("SWW1", 4), 
-                       rep("SD1", 3),
-                       rep("SWW2", 4),
-                       rep("SD2", 5))
+ecotype_condition <- c(rep("mmg0", 3), 
+                       rep("mmg12", 3),
+                       rep("mmg24", 3),
+                       rep("mpst0", 3),
+                       rep("mpst12", 3), 
+                       rep("mpst24", 3),
+                       rep("ymg0", 3),
+                       rep("ymg12", 3),
+                       rep("ymg24", 3),
+                       rep("ypst0", 3),
+                       rep("ypst12", 3),
+                       rep("ypst24", 3)
+                       )
 
 datTraits <- data.frame(ecocond = as.factor(ecotype_condition))
 rownames(datTraits) <- colnames(allgenes)
@@ -111,10 +117,12 @@ moduleTraitPvalue <- corPvalueStudent(moduleTraitCor,31);
 
 pal <- colorRampPalette(c("#E7B800","#E7B800", "white", "#67A7C1", "#67A7C1"),
                         alpha=TRUE, interp="spline")(100)
-droughtcol <- c("#C0C8C8","#8D9B9B",  "#6A90D1", "#5776AC",
-                "#C0C8C8","#8D9B9B",  "#6A90D1", "#5776AC")
+droughtcol <- c("#C0C8C8","#8D9B9B",  "#6A90D1",
+                "#C0C8C8","#8D9B9B",  "#6A90D1",
+                "#C0C8C8","#8D9B9B",  "#6A90D1",
+                "#C0C8C8","#8D9B9B",  "#6A90D1")
 
-colnames(moduleTraitCor) <- c("SD1", "SD2", "SWW1", "SWW2", "YD1", "YD2", "YWW1", "YWW2")
+colnames(moduleTraitCor) <- c("mmg0", "mmg12", "mmg24", "mpst0", "mpst12", "mpst24", "ymg0", "ymg12", "ymg24", "ypst0", "ypst12", "ypst24")
 sample_clust <- hclust(dist(t(moduleTraitCor), method="euclidean"))
 module_clust <- hclust(as.dist(1-cor(t(moduleTraitCor), method="pearson")))
 
@@ -122,9 +130,10 @@ rownames(moduleTraitCor) <- rownames(moduleTraitCor) %>% substr(.,3,nchar(rownam
 
 head(moduleTraitCor)
 
-colnames(moduleTraitCor) <- c("SD1", "SD2", "SWW1", "SWW2", "YD1", "YD2", "YWW1", "YWW2")
+colnames(moduleTraitCor) <- c("mmg0", "mmg12", "mmg24", "mpst0", "mpst12", "mpst24", "ymg0", "ymg12", "ymg24", "ypst0", "ypst12", "ypst24")
 
 corr_clust <- moduleTraitCor[module_clust$order, sample_clust$order]
+corr_clust <- moduleTraitCor[module_clust$order, ]
 correlation_ggplot <- corr_clust%>% melt()
 dx <- dendro_data(sample_clust)
 dy <- dendro_data(module_clust)
@@ -159,25 +168,35 @@ clust.of.interest <- c('lightcyan1', 'lightyellow', 'purple', 'pink',
 ggsave("./figs/select_clust_heatmap.pdf", dendro_heatmap,
        height=6, width = 7, units = "in")
 
-
-(heatmap_full <- ggplot(data = correlation_ggplot, 
+pdf(file = "all_clust_dendheatmap.pdf")
+heatmap_full <- ggplot(data = correlation_ggplot, 
                         aes(x = Var2, y = Var1)) +
     geom_tile(aes(fill =value), colour="darkgrey") +
     scale_fill_gradient2(midpoint = 0, low = "#00798C", #mid = "white", 
                          high = "#FF6F59", na.value = "white", name = "Correlation", 
                          limits=c(-1, 1), breaks=seq(-1,1,by=0.5)) + 
     labs(x="Ecotype and Condition", y="Clusters") +  theme_bw() + #theme(axis.text.y=element_blank(), plot.margin = margin(-0.75, 0, 0,0 , "cm")))
-    theme(axis.text.y=element_text(angle=20,vjust=0.5), plot.margin = margin(-0.75, 0, 0,0 , "cm")))
-(dendro_heatmap_full <- px + heatmap_full + plot_layout(ncol = 1, heights = c(1, 5))) 
+    theme(axis.text.y=element_text(angle=20,vjust=0.5), plot.margin = margin(-0.75, 0, 0,0 , "cm"))
+dendro_heatmap_full <- px + heatmap_full + plot_layout(ncol = 1, heights = c(1, 5))
+dendro_heatmap_full = heatmap_full + plot_layout(ncol = 1, heights =  5)
+dendro_heatmap_full
+dev.off()
 
-
-ggsave("./figs/all_clust_heatmap.pdf", dendro_heatmap_full,
+ggsave("./plots/all_clust_heatmap.pdf", dendro_heatmap_full,
        height=10, width = 8, units = "in")
 geneClusters <- network$colors
 genenames <- rownames(allgenes)
 names(clustcolours) <- genenames
 
-clustcolours[names(clustcolours) %>% toupper() %in% pattern3genes]
+pattern3genes = "BLUE"
+
+genesOI = clustcolours[clustcolours %in% "blue"]
+genesOI = objectSymbol[names(genesOI)]
+AUGs = unique(c(find.unique("0")$accession, find.unique("12")$accession, find.unique("24")$accession))
+colOI = clustcolours[names(clustcolours) %>% toupper() %in% AUGs]
+tbl = as.data.frame(table(colOI))
+tbl = tbl[order(tbl$Freq, decreasing = T), ]
+
 clustcolours[names(clustcolours) %>% toupper() %in% pattern4genes]
 
 
@@ -222,58 +241,6 @@ y.clust_count[1:6] %>% sum()
 s.clust_count <- clustcolours[names(clustcolours) %in% shandeg] %>% 
   table() %>% as.matrix() %>% sort() %>% rev() ##5580
 s.clust_count[1:5] %>% sum
-
-## does this change with lncRNAs?
-
-SWW1SD1lnc <- rbind(SWW1.SD1.degs[['pos_lnc']], SWW1.SD1.degs[['neg_lnc']])
-SD1SWW2lnc <- rbind(SD1.SWW2.degs[['pos_lnc']], SD1.SWW2.degs[['neg_lnc']])
-SWW2SD2lnc <- rbind(SWW2.SD2.degs[['pos_lnc']], SWW2.SD2.degs[['neg_lnc']])
-YWW1YD1lnc <- rbind(YWW1.YD1.degs[['pos_lnc']], YWW1.YD1.degs[['neg_lnc']])
-YD1YWW2lnc <- rbind(YD1.YWW2.degs[['pos_lnc']], YD1.YWW2.degs[['neg_lnc']])
-YWW2YD2lnc <- rbind(YWW2.YD2.degs[['pos_lnc']], YWW2.YD2.degs[['neg_lnc']])
-
-lncdegs <- list(SWW1SD1=SWW1SD1lnc, SD1SWW2=SD1SWW2lnc, SWW2SD2=SWW2SD2lnc,
-                YWW1YD1=YWW1YD1lnc, YD1YWW2=YD1YWW2lnc, YWW2YD2=YWW2YD2lnc)
-
-lncdegs_genes <- rbind(SWW1SD1lnc, SD1SWW2lnc,SWW2SD2lnc,
-                       YWW1YD1lnc,YD1YWW2lnc,YWW2YD2lnc)
-lncdegs_genes <- lncdegs_genes$Row.names %>% unique()
-lnc_clusters <- lapply(lncdegs, function(x) clustcolours[names(clustcolours) %in% x$Row.names])
-
-lnc_clusters[["SD1SWW2"]] %>% table() %>% sort() 
-lnc_clusters[["SD1SWW2"]] %>% table() %>% sort()
-lnc_clusters[["SWW2SD2"]] %>% table() %>% sort()             
-lnc_clusters[["YD1YWW2"]] %>% table() %>% sort() 
-lnc_clusters[["YD1YWW2"]] %>% table() %>% sort()
-lnc_clusters[["YWW2YD2"]] %>% table() %>% sort()             
-
-
-
-lnc_count <- clustcolours[names(clustcolours) %in% lncdegs_genes] %>% 
-  table() # %>% as.matrix() %>% sort() %>% rev()
-
-
-
-
-lnc_degs <- clustcolours[names(clustcolours) %in% lncdegs_genes] %>% table() %>% as.matrix()
-clustnum <- clustcolours %>% table() %>% as.matrix
-perc_lnc <- merge(lnc_degs, clustnum, all.y=T, by=0)
-perc_lnc <- data.frame(perc_lnc, perc=(perc_lnc$V1.x/perc_lnc$V1.y)*100)
-perc_lnc <- merge(perc_lnc, moduleTraitCor, by.x="Row.names",by.y=0)%>% arrange(.,desc(perc))
-
-# how many genes in each cluster are lncRNAs?
-total_lnc_count <- clustcolours[names(clustcolours) %in% unique_lncrna] %>% table() %>% as.matrix()
-clustnum <- clustcolours %>% table() %>% as.matrix()
-total_perc_lnc <- merge(total_lnc_count, clustnum, by=0)
-total_perc_lnc <- data.frame(total_perc_lnc, perc=(total_perc_lnc$V1.x/total_perc_lnc$V1.y)*100)
-# how many genes in each cluster are not in reference annotation?
-novel_genes <-names(clustcolours)[!startsWith(names(clustcolours), "Thhalv")]
-novel_count <- clustcolours[names(clustcolours) %in% novel_genes] %>% table() %>% as.matrix()
-novel_perc <- merge(novel_count, clustnum, by=0)
-novel_perc <- data.frame(novel_perc, perc=(novel_perc$V1.x/novel_perc$V1.y)*100)
-
-clustcolours[grep("Thhalv10012372", names(clustcolours))]
-clustcolours[grep("Thhalv10023284", names(clustcolours))]
 
 ##################
 ## GO enrichment #
@@ -391,33 +358,3 @@ revigo_summarize <- function(revigo, sig_go){
 turq_rev <- read.csv("./data_files/turquoise_rev.txt")
 turquoise_rev <- revigo_summarize(turq_rev, turquoise_res)
 
-## DRIR analysis
-## are any of our drought related DEGs homologous to DRIR (the drought related lncRNA in ath?)
-
-drir_blast <- read.csv("./data_files/yuk_drir.out",
-                       sep="\t", header=F)
-gene_trans <- read.csv("./data_files/gene_transcript.csv",
-                       header=F, sep=" ")
-
-drir_trans <- merge(drir_blast, gene_trans, by.x=2, by.y=2, all.x=T)
-
-drir_trans <- drir_trans[!duplicated(drir_trans$V1.y),]
-
-drir_trans$V1.y %in% YWW1.YD1.degs[["pos"]]$Row.names
-drir_trans$V1.y %in% YWW2.YD2.degs[["pos"]]$Row.names
-drir_trans$V1.y %in% SWW1.SD1.degs[["pos"]]$Row.names
-SWW2.SD2.degs[["pos"]][SWW2.SD2.degs[["pos"]]$Row.names %in% drir_trans$V1.y,] 
-
-turquoise_genes[turquoise_genes %in% drir_trans$V1.y]
-
-a <- turquoise_genes[turquoise_genes %in% YWW1.YD1.degs[["pos_lnc"]]$Row.names]
-b <- turquoise_genes[turquoise_genes %in% YWW2.YD2.degs[["pos_lnc"]]$Row.names]
-turquoise_genes[turquoise_genes %in% SWW1.SD1.degs[["pos_lnc"]]$Row.names]
-c <- turquoise_genes[turquoise_genes %in% SWW2.SD2.degs[["pos_lnc"]]$Row.names]
-
-c(a,b,c) %>% unique()
-yuk_droughtlnc <- c(a,b)
-
-intersect(yuk_droughtlnc, c)
-setdiff(yuk_droughtlnc, c)
-setdiff(c, yuk_droughtlnc)

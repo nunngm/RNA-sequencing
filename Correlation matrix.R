@@ -19,8 +19,7 @@ library(zoo)
 # # uncomment if you want to source this file
 # setwd("C:/Users/Garrett/Documents/Local Git/RNA-sequencing")
 # source("ARR-rna-seqsetup.R")
-allgenes = counts(allData, normalized = T)
-
+allgenes = log2(counts(allData, normalized = T)) #WGCNA suggests reducing variance by logging the read count
 allowWGCNAThreads()
 options(stringsAsFactors = FALSE)
 

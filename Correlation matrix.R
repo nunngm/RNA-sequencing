@@ -19,7 +19,7 @@ library(zoo)
 # # uncomment if you want to source this file
 # setwd("C:/Users/Garrett/Documents/Local Git/RNA-sequencing")
 # source("ARR-rna-seqsetup.R")
-allgenes = log2(counts(allData, normalized = T)) #WGCNA suggests reducing variance by logging the read count
+allgenes = counts(allData, normalized = T)
 allowWGCNAThreads()
 options(stringsAsFactors = FALSE)
 
@@ -65,7 +65,7 @@ text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
 ## 8 looks like a good fit
 
 # need to do it block wise because my computer doesnt have enough RAM for this
-network = blockwiseModules(t(allgenes), power = 5,
+network = blockwiseModules(t(allgenes), power = 6,
                            TOMType = "none",
                            networkType = "signed hybrid",
                            randomSeed = 319, corType = "pearson", 
@@ -77,7 +77,7 @@ network = blockwiseModules(t(allgenes), power = 5,
                            verbose = 3, maxBlockSize = 10000)
 
 ## if you save this, it is much quicker to run
-save.image("blockwiseNetwork.RData")
+# save.image("blockwiseNetwork.RData")
 load("blockwiseNetwork.RData")
 
 
@@ -131,7 +131,9 @@ head(moduleTraitCor)
 
 colnames(moduleTraitCor) <- c("mmg0", "mmg12", "mmg24", "mpst0", "mpst12", "mpst24", "ymg0", "ymg12", "ymg24", "ypst0", "ypst12", "ypst24")
 
-corr_clust <- moduleTraitCor[module_clust$order, sample_clust$order]
+groupedByHpi = c(7,10,1,4,8,11,2,5,9,12,3,6)
+
+corr_clust <- moduleTraitCor[module_clust$order, groupedByHpi]
 corr_clust <- moduleTraitCor[module_clust$order, ]
 correlation_ggplot <- corr_clust%>% melt()
 dx <- dendro_data(sample_clust)
@@ -167,7 +169,7 @@ clust.of.interest <- c('lightcyan1', 'lightyellow', 'purple', 'pink',
 ggsave("./figs/select_clust_heatmap.pdf", dendro_heatmap,
        height=6, width = 7, units = "in")
 
-pdf(file = "all_clust_dendheatmap.pdf")
+pdf(file = "all_clust_heatmap.pdf")
 heatmap_full <- ggplot(data = correlation_ggplot, 
                         aes(x = Var2, y = Var1)) +
     geom_tile(aes(fill =value), colour="darkgrey") +
@@ -187,59 +189,37 @@ geneClusters <- network$colors
 genenames <- rownames(allgenes)
 names(clustcolours) <- genenames
 
-pattern3genes = "BLUE"
 
-genesOI = clustcolours[clustcolours %in% "blue"]
-genesOI = objectSymbol[names(genesOI)]
-AUGs = unique(c(find.unique("0")$accession, find.unique("12")$accession, find.unique("24")$accession))
-colOI = clustcolours[names(clustcolours) %>% toupper() %in% AUGs]
-tbl = as.data.frame(table(colOI))
-tbl = tbl[order(tbl$Freq, decreasing = T), ]
 
-clustcolours[names(clustcolours) %>% toupper() %in% pattern4genes]
+
 
 
 ## What about ALL DEGS?? 
 ## let's put all DEGs into a list, then are able to see which cluster(s) entire groups of degs are in!
 ## this depends on output from deseq2_drought.R
 
-SWW1SD1_alldegs <- rbind(SWW1.SD1.degs[['pos']], SWW1.SD1.degs[['neg']])
-SD1SWW2_alldegs <- rbind(SD1.SWW2.degs[['pos']], SD1.SWW2.degs[['neg']])
-SWW2SD2_alldegs <- rbind(SWW2.SD2.degs[['pos']], SWW2.SD2.degs[['neg']])
-YWW1YD1_alldegs <- rbind(YWW1.YD1.degs[['pos']], YWW1.YD1.degs[['neg']])
-YD1YWW2_alldegs <- rbind(YD1.YWW2.degs[['pos']], YD1.YWW2.degs[['neg']])
-YWW2YD2_alldegs <- rbind(YWW2.YD2.degs[['pos']], YWW2.YD2.degs[['neg']])
+AUGs = unique(c(find.unique("0")$accession, find.unique("12")$accession, find.unique("24")$accession))
+colOI = clustcolours[names(clustcolours) %>% toupper() %in% AUGs]
 
-alldegs_list <- list(sww1sd1 = SWW1SD1_alldegs, sd1sww2=SD1SWW2_alldegs, sww2sd2=SWW2SD2_alldegs,
-                     yww1yd1 = YWW1YD1_alldegs, yd1yww2=YD1YWW2_alldegs, yww2yd2=YWW2YD2_alldegs)
+volc = list(find.volcano("0"), find.volcano("12"), find.volcano("24"))
+uod = "DOWN"
+
+volc = unique(c(rownames(volc[[1]][volc[[1]]$de == uod, ]), rownames(volc[[2]][volc[[2]]$de == uod, ]), rownames(volc[[3]][volc[[3]]$de == uod, ]) ))
+colOI = clustcolours[names(clustcolours) %>% toupper() %in% volc]
+
+# summarize findings from modules
+tbl = as.data.frame(table(colOI))
+tbl = tbl[order(tbl$Freq, decreasing = T), ]
+tbl = cbind(tbl, t(as.data.frame(lapply(tbl$colOI, function(x) {tmp = length(clustcolours[clustcolours %in% x])}))))
+tbl = cbind(tbl, c(tbl$Freq/tbl[, 3]))
+colnames(tbl) = c("colOI", "freq", "size", "ratio")
+tbl[order(tbl$ratio, decreasing = T), ]
+
+clustcolours[names(clustcolours) %>% toupper() %in% pattern4genes]
 
 
-
-test<-SWW1SD1_alldegs$Row.names
-clustcolours[names(clustcolours) %in% test]
-
-
-clust_count <- clustcolours[names(clustcolours) %in% alldegs] %>% 
-  table() # %>% as.matrix() %>% sort() %>% rev()
-
-clust_degs <- clustcolours[names(clustcolours) %in% alldegs] %>% table() %>% as.matrix()
-clustnum <- clustcolours %>% table() %>% as.matrix
-perc_deg <- merge(clust_degs, clustnum, all.y=T, by=0)
-perc_deg <- data.frame(perc_deg, perc=(perc_deg$V1.x/perc_deg$V1.y)*100)
-perc_deg <- merge(perc_deg, moduleTraitCor, by.x="Row.names",by.y=0)%>% arrange(.,desc(perc))
-
-#write.csv(perc_deg, "deg_clusts.csv")
-## how many clusters do we have to do to get 90% of the degs?
-clust_count[1:18] %>% sum() ## too many..what if you were just doing the ecotypes ind?
-
-y.clust_count <- clustcolours[names(clustcolours) %in% yukdeg] %>% 
-  table() %>% as.matrix() %>% sort() %>% rev() ## 3559
-
-y.clust_count[1:6] %>% sum()
-
-s.clust_count <- clustcolours[names(clustcolours) %in% shandeg] %>% 
-  table() %>% as.matrix() %>% sort() %>% rev() ##5580
-s.clust_count[1:5] %>% sum
+genesOI = clustcolours[clustcolours %in% "turquoise"]
+objectSymbol[names(genesOI)]
 
 ##################
 ## GO enrichment #

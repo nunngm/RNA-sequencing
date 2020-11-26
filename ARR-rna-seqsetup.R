@@ -61,10 +61,14 @@ samples <- c("m_mg_0h_s1", "m_mg_0h_s2","m_mg_0h_s3","m_mg_12h_s1","m_mg_12h_s2"
 names(files) <- samples
 
 #Subset dataset by time
-sub_0 = c(1:3,10:12,19:21,28:30)
-sub_12 = c(4:6,13:15,22:24,31:33)
-sub_24 = c(7:9,16:18,25:27,34:36)
+# sub_0 = c(1:3,10:12,19:21,28:30)
+# sub_12 = c(4:6,13:15,22:24,31:33)
+# sub_24 = c(7:9,16:18,25:27,34:36)
 
+#ymg ypst mmg mpst
+sub_0 = c(19:21,28:30, 1:3,10:12) 
+sub_12 = c(22:24,31:33,4:6,13:15)
+sub_24 = c(25:27,34:36, 7:9,16:18)
 ##Sample information to build a model
 infection = factor(c(rep("mg", 9), rep("pst", 9), rep("mg", 9), rep("pst", 9)), levels = c("mg", "pst")) #Treatment type, mg = mock solution, pst = P syringae pv tomato
 hpi = factor(rep(c(rep(0, 3), rep(12, 3), rep(24, 3)), 4), levels = c(0, 12, 24)) #Hours post infiltration

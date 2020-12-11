@@ -1,7 +1,9 @@
 # Loading the library
 library(glmnet)
 library(caret)
+set.seed(31138)
 
+# Method to evaluate final results
 eval_results <- function(true, predicted, df) {
   SSE <- sum((predicted - true)^2)
   SST <- sum((true - mean(true))^2)
@@ -16,68 +18,98 @@ eval_results <- function(true, predicted, df) {
   )
   
 }
-# Loading the data
-data(swiss)
 
-x_vars <- model.matrix(Fertility~. , swiss)[,-1]
-y_var <- swiss$Fertility
-lambda_seq <- 10^seq(2, -2, by = -.1)
+#Find the AUGs at 0.25 hpi
+data = compare.group(hpi = "0", altH = "greater")
 
-# Splitting the data into test and train
-set.seed(86)
-train = sample(1:nrow(x_vars), nrow(x_vars)/2)
-x_test = (-train)
-y_test = y_var[x_test]
+# Generate a list of AUGs at this timepoint using Tstat
+genesOI = (-data[[1]]$stat+data[[2]]$stat-data[[3]]$stat+data[[4]]$stat)/sqrt(4)
+y_resp = as.numeric(genesOI)
 
-cv_output <- cv.glmnet(x_vars[train,], y_var[train],
-                       alpha = 1, lambda = lambda_seq, 
-                       nfolds = 5)
-cv_output <- cv.glmnet(x_vars, y_var,
-                       alpha = 1, lambda = lambda_seq, 
-                       nfolds = 5)
+# Collect the appropriate count data
+countData = counts(allData, normalized = T)[, sub_0] #only 0.25 hpi time point
 
-# identifying best lamda
-best_lam <- cv_output$lambda.min
-best_lam
+# Randomly sample the genes
+sample = sample(1:nrow(countData), round(0.8*nrow(countData)))
+trn = countData[sample, ]
+tst = countData[-sample, ]
+
+# Linear model for the genes of interest, Recommended folds = 10, all samples are in the same units so standardize = F, covariate regression therefore alpha must be 1
+lambdas <- 10^seq(2, -3, by = -.1)
+lasso_reg <- cv.glmnet(trn , y_resp[sample], alpha = 1, lambda = lambdas, standardize = F, nfolds = 10)
+
+# Find the best lambda to use moving forward
+lambda_best <- lasso_reg$lambda.min 
+lambda_best
+
+#Which samples are important for the model?
+x = as.matrix(coef(lasso_reg, lasso_reg$lambda.min))
+x = x[x[, 1]!=0, ]
+x
+
+# Generate the optimal model
+lasso_model <- glmnet(trn, y_resp[sample], alpha = 1, lambda = lambda_best, standardize = F)
+
+# Test the performance of the model
+predictions_test = predict(lasso_model, s = lambda_best, newx = tst)
+eval_results(y_resp[-sample], predictions_test, tst)
+#Large RMSE and low R-squared - not very accurate model
+
+# let's check it anyways
+predictions = predict(lasso_model, s = lambda_best, newx = countData)
+eval_results(y_resp, predictions, countData)
 
 
 ##Find genes which are AUGs at a given timepoint -> to be fed into LASSO
 # Perform a conservative pearson correlation on 
-temp = compare.group()
-data = temp[[4]]
-data$padj =  -2*(log(1-temp[[4]]$padj)+log(1-temp[[2]]$padj)+log(temp[[1]]$padj))
-data$padj =  pchisq(data$padj,2*3)
+data = compare.group(altH = "greater")
+
+# Now incorporates directionality ... what genes 
+genesOI = rowMeans(cbind((-data[[1]]$stat+data[[2]]$stat-data[[3]]$stat+data[[4]]$stat)/sqrt(4), (data[[8]]$stat-data[[7]]$stat+data[[6]]$stat-data[[5]]$stat)/sqrt(4), (data[[12]]$stat-data[[11]]$stat+data[[10]]$stat-data[[9]]$stat)/sqrt(4)))
+
+## 
+genesOI = rowMeans(cbind((-data[[1]]$stat+data[[2]]$stat-data[[3]]$stat+data[[4]]$stat)/sqrt(4), (data[[8]]$stat-data[[7]]$stat+data[[6]]$stat-data[[5]]$stat)/sqrt(4), (data[[12]]$stat-data[[11]]$stat+data[[10]]$stat-data[[9]]$stat)/sqrt(4)))
 
 
-genesOI = find.volcano("12")
+genesOI = as.data.frame(cbind(genesOI, pt(q = genesOI, df = 3, lower.tail = F), objectSymbol[rownames(data[[1]])]))
+rownames(genesOI) = rownames(data[[1]])
 
-genesOI$padj = (1-genesOI$padj)*(sign(genesOI$log2FoldChange))
-genesOI = genesOI[order(genesOI$padj, decreasing = T), ]
+genesOI = genesOI[order(genesOI[, 1], decreasing = T), ]
+
+temp = genesOI[genesOI$genesOI > 1.6, ]
+
+
+
 
 data = counts(allData, normalized = T)[,]
-y_resp = factor(rep(c(rep("no", 9), rep("yes", 3)), 3))
+y_resp = as.numeric(genesOI$genesOI)
+# y_resp = factor(rep(c(rep("no", 9), rep("yes", 3)), 3))
 
 lambdas <- 10^seq(2, -3, by = -.1)
 
+
+
 # Setting alpha = 1 implements lasso regression
-lasso_reg <- cv.glmnet(t(data), y_resp, alpha = 1, family = "binomial", lambda = lambdas, standardize = TRUE, nfolds = 5)
+sample = sample(1:nrow(data), round(0.8*nrow(data)))
+trn = data[sample, ]
+tst = data[-sample, ]
+lasso_reg <- cv.glmnet(trn, y_resp[sample], alpha = 1, lambda = lambdas, standardize = TRUE, nfolds = 5)
 
 # Best 
 lambda_best <- lasso_reg$lambda.min 
 x = as.matrix(coef(lasso_reg, lasso_reg$lambda.min))
 x = x[x[, 1]!=0, ]
 lambda_best
+x
+lasso_model <- glmnet(trn, y_resp[sample], alpha = 1, lambda = lambda_best, standardize = TRUE)
 
-lasso_model <- glmnet(t(data), y_resp, alpha = 1, lambda = lambda_best, standardize = TRUE, family = "binomial")
-
-predictions_train <- predict(lasso_model, s = lambda_best, newx = t(data))
-eval_results(as.integer(y_resp), predictions_train, t(data))
+predictions_train <- predict(lasso_model, s = lambda_best, newx = trn)
+eval_results(y_resp[sample], predictions_train, trn)
 x = as.matrix(coef(lasso_model, lasso_model$lambda.min))
 x = x[x[, 1]!=0, ]
 
-predictions_test <- predict(lasso_model, s = lambda_best, newx = x_test)
-eval_results(y_test, predictions_test, test)
+predictions_test = predict(lasso_model, s = lambda_best, newx = tst)
+eval_results(y_resp[-sample], predictions_test, tst)
 
 
-cvfit = cv.glmnet(t(data), y_resp, family = "binomial")
-warnings(cvfit = cv.glmnet(t(data), y_resp, family = "binomial"))
+

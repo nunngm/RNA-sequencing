@@ -17,6 +17,7 @@ library(VennDiagram)
 library(scales)
 library(xlsx)
 library(stringi)
+set.seed(31138)
 
 #laptop directory
 setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-R workshop")
@@ -102,7 +103,7 @@ allData <- DESeq(rawData)
 
 ##A really nice function (if a little messy) that completes only the comparisons you deem relevent but does not compare between timepoints
         #ie if you set the age to "y" then it will complete ypst - ymg at every time point
-compare.group = function(age = c("y", "m"), infection = c("mg", "pst"), hpi = c("0", "12", "24")){
+compare.group = function(age = c("y", "m"), infection = c("mg", "pst"), hpi = c("0", "12", "24"), altH = c("greaterAbs", "lessAbs", "greater", "less")){
      compGroups = lapply(age, function(x){tmp = paste0(x,infection)
                     return(tmp)
            })
@@ -127,7 +128,7 @@ compare.group = function(age = c("y", "m"), infection = c("mg", "pst"), hpi = c(
      ##need to get rownames efficiently
      final = list()
      for (i in 1:nrow(out)){
-          tmp = results(allData,contrast = c("group", out[i, 1], out[i, 2]), alpha = 0.05, pAdjustMethod="BH")
+          tmp = results(allData,contrast = c("group", out[i, 1], out[i, 2]), alpha = 0.05, pAdjustMethod="BH", altHypothesis = altH)
           tmp = as.data.frame(tmp@listData, row.names = tmp@rownames)
           final[[i]] = tmp
      }
@@ -319,8 +320,9 @@ find.unique = function(hpi, reverse = F, down = F ){
           genesOI = genesOI[order(genesOI$mmg_ymg + genesOI$mpst_mmg - genesOI$ypst_ymg, decreasing = T), ]
           genesOI = cbind(genesOI, objectSymbol[genesOI$accession], desvec[genesOI$accession])
      } else if (reverse == T & down == F){
-          genesOI = subset(genesOI, ypst_ymg > 0 & qypst < 0.05)
-          genesOI = subset(genesOI, mpst_mmg < 0 | qmpst > 0.05)
+          genesOI = subset(genesOI, qypst < 0.1)
+          genesOI = subset(genesOI, ypst_ymg > 0)
+          genesOI = subset(genesOI, mpst_mmg < 0 | qmpst >0.1)
           genesOI = subset(genesOI, ypst_ymg - mmg_ymg - mpst_mmg > log2(1.5))
           genesOI = genesOI[order(genesOI$ypst_ymg - genesOI$mmg_ymg - genesOI$mpst_mmg, decreasing = T), ]
           genesOI = cbind(genesOI, objectSymbol[genesOI$accession], desvec[genesOI$accession])

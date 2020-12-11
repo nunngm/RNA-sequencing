@@ -68,7 +68,7 @@ text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
 network = blockwiseModules(t(allgenes), power = 6,
                            TOMType = "none",
                            networkType = "signed hybrid",
-                           randomSeed = 319, corType = "pearson", 
+                           randomSeed = 31138, corType = "pearson", 
                            minModuleSize = 30,
                            reassignThreshold = 0, mergeCutHeight = 0.25,
                            numericLabels = TRUE, pamRespectsDendro = FALSE,
@@ -92,18 +92,18 @@ nSamples = ncol(allgenes);
 # Recalculate MEs with color labels
 MEs0 = moduleEigengenes(t(allgenes), clustcolours)$eigengenes
 MEs = orderMEs(MEs0)
-ecotype_condition <- c(rep("mmg0", 3), 
-                       rep("mmg12", 3),
-                       rep("mmg24", 3),
-                       rep("mpst0", 3),
-                       rep("mpst12", 3), 
-                       rep("mpst24", 3),
-                       rep("ymg0", 3),
-                       rep("ymg12", 3),
-                       rep("ymg24", 3),
-                       rep("ypst0", 3),
-                       rep("ypst12", 3),
-                       rep("ypst24", 3)
+ecotype_condition <- c(rep("M_Mock_0.25", 3), 
+                       rep("M_Mock_12", 3),
+                       rep("M_Mock_24", 3),
+                       rep("M_Pst_0.25", 3),
+                       rep("M_Pst_12", 3), 
+                       rep("M_Pst_24", 3),
+                       rep("Y_Mock_0.25", 3),
+                       rep("Y_Mock_12", 3),
+                       rep("Y_Mock_24", 3),
+                       rep("Y_Pst_0.25", 3),
+                       rep("Y_Pst_12", 3),
+                       rep("Y_Pst_24", 3)
                        )
 
 datTraits <- data.frame(ecocond = as.factor(ecotype_condition))
@@ -121,7 +121,7 @@ droughtcol <- c("#C0C8C8","#8D9B9B",  "#6A90D1",
                 "#C0C8C8","#8D9B9B",  "#6A90D1",
                 "#C0C8C8","#8D9B9B",  "#6A90D1")
 
-colnames(moduleTraitCor) <- c("mmg0", "mmg12", "mmg24", "mpst0", "mpst12", "mpst24", "ymg0", "ymg12", "ymg24", "ypst0", "ypst12", "ypst24")
+colnames(moduleTraitCor) <- c("M_Mock_0.25", "M_Mock_12", "M_Mock_24", "M_Pst_0.25", "M_Pst_12", "M_Pst_24", "Y_Mock_0.25", "Y_Mock_12", "Y_Mock_24", "Y_Pst_0.25", "Y_Pst_12", "Y_Pst_24")
 sample_clust <- hclust(dist(t(moduleTraitCor), method="euclidean"))
 module_clust <- hclust(as.dist(1-cor(t(moduleTraitCor), method="pearson")))
 
@@ -129,12 +129,12 @@ rownames(moduleTraitCor) <- rownames(moduleTraitCor) %>% substr(.,3,nchar(rownam
 
 head(moduleTraitCor)
 
-colnames(moduleTraitCor) <- c("mmg0", "mmg12", "mmg24", "mpst0", "mpst12", "mpst24", "ymg0", "ymg12", "ymg24", "ypst0", "ypst12", "ypst24")
+colnames(moduleTraitCor) <- c("M_Mock_0.25", "M_Mock_12", "M_Mock_24", "M_Pst_0.25", "M_Pst_12", "M_Pst_24", "Y_Mock_0.25", "Y_Mock_12", "Y_Mock_24", "Y_Pst_0.25", "Y_Pst_12", "Y_Pst_24")
 
 groupedByHpi = c(7,10,1,4,8,11,2,5,9,12,3,6)
 
 corr_clust <- moduleTraitCor[module_clust$order, groupedByHpi]
-corr_clust <- moduleTraitCor[module_clust$order, ]
+corr_clust <- moduleTraitCor[module_clust$order, sample_clust$order]
 correlation_ggplot <- corr_clust%>% melt()
 dx <- dendro_data(sample_clust)
 dy <- dendro_data(module_clust)
@@ -153,9 +153,8 @@ px <- ggdend(dx$segments)
 py <- ggdend(dy$segments) + coord_flip()
 
 
-clust.of.interest <- c('lightcyan1', 'lightyellow', 'purple', 'pink', 
-                       'blue', 'darkslateblue', 'turquoise', 'coral', 'red')
-
+clust.of.interest <- c("green", "purple", "maroon", "magenta", "greenyellow", "grey60", "yellowgreen", "darkred")
+par(cex=0.5)
 (heatmap <- ggplot(data = correlation_ggplot %>% filter(., Var1 %in% clust.of.interest), 
                    aes(x = Var2, y = Var1)) +
     geom_tile(aes(fill =value), colour="darkgrey") +
@@ -163,10 +162,11 @@ clust.of.interest <- c('lightcyan1', 'lightyellow', 'purple', 'pink',
                          high = "#FF8977", na.value = "white", name = "Correlation", 
                          limits=c(-1, 1), breaks=seq(-1,1,by=0.5)) + 
     labs(x="Ecotype and Condition", y="Clusters") +  theme_bw() + #theme(axis.text.y=element_blank(), plot.margin = margin(-0.75, 0, 0,0 , "cm")))
-    theme(axis.text.y=element_text(angle=20,vjust=0.5), plot.margin = margin(-0.75, 0, 0,0 , "cm")))
+    theme(axis.text.y=element_text(angle=20,vjust=0.5), axis.text.x = element_text(angle = -30, vjust = 0.5, hjust = 0, size = 9), plot.margin = margin(-0.75, 0, 0,0 , "cm")))
 (dendro_heatmap <- px + heatmap + plot_layout(ncol = 1, heights = c(1, 5))) # + plot_layout(ncol=2, widths=(1,5))
+(heatmap = heatmap + plot_layout(ncol = 1, heights = 1))
 
-ggsave("./figs/select_clust_heatmap.pdf", dendro_heatmap,
+ggsave("select_clust_heatmap.pdf", dendro_heatmap,
        height=6, width = 7, units = "in")
 
 pdf(file = "all_clust_heatmap.pdf")
@@ -185,9 +185,12 @@ dev.off()
 
 ggsave("./plots/all_clust_heatmap.pdf", dendro_heatmap_full,
        height=10, width = 8, units = "in")
+
 geneClusters <- network$colors
 genenames <- rownames(allgenes)
 names(clustcolours) <- genenames
+
+genesOI = names(clustcolours[clustcolours == "green"])
 
 
 
@@ -201,8 +204,18 @@ names(clustcolours) <- genenames
 AUGs = unique(c(find.unique("0")$accession, find.unique("12")$accession, find.unique("24")$accession))
 colOI = clustcolours[names(clustcolours) %>% toupper() %in% AUGs]
 
+SUGs = unique(c(find.unique("0", reverse = T)$accession, find.unique("12", reverse = T)$accession, find.unique("24", reverse = T)$accession))
+colOI = clustcolours[names(clustcolours) %>% toupper() %in% SUGs]
+
+colOI = clustcolours[names(clustcolours) %>% toupper() %in% rownames(temp)]
+
+data = compare.group(altH = "greater")
+genesOI = rowMeans(cbind((-data[[1]]$stat+data[[2]]$stat-data[[3]]$stat+data[[4]]$stat)/sqrt(4), (data[[8]]$stat-data[[7]]$stat+data[[6]]$stat-data[[5]]$stat)/sqrt(4), (data[[12]]$stat-data[[11]]$stat+data[[10]]$stat-data[[9]]$stat)/sqrt(4)))
+genesOI = genesOI >1.65
+AUGs = rownames(data[[1]][ genesOI, ])
+
 volc = list(find.volcano("0"), find.volcano("12"), find.volcano("24"))
-uod = "DOWN"
+uod = "UP"
 
 volc = unique(c(rownames(volc[[1]][volc[[1]]$de == uod, ]), rownames(volc[[2]][volc[[2]]$de == uod, ]), rownames(volc[[3]][volc[[3]]$de == uod, ]) ))
 colOI = clustcolours[names(clustcolours) %>% toupper() %in% volc]
@@ -214,11 +227,12 @@ tbl = cbind(tbl, t(as.data.frame(lapply(tbl$colOI, function(x) {tmp = length(clu
 tbl = cbind(tbl, c(tbl$Freq/tbl[, 3]))
 colnames(tbl) = c("colOI", "freq", "size", "ratio")
 tbl[order(tbl$ratio, decreasing = T), ]
+tbl[order(tbl$freq, decreasing = T), ]
 
 clustcolours[names(clustcolours) %>% toupper() %in% pattern4genes]
 
 
-genesOI = clustcolours[clustcolours %in% "turquoise"]
+genesOI = clustcolours[clustcolours %in% "navajowhite2"]
 objectSymbol[names(genesOI)]
 
 ##################

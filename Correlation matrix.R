@@ -62,7 +62,7 @@ plot(sft$fitIndices[,1], sft$fitIndices[,5],
      main = paste("Mean connectivity"))
 text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
 
-## 8 looks like a good fit
+## 6 looks like a good fit
 
 # need to do it block wise because my computer doesnt have enough RAM for this
 network = blockwiseModules(t(allgenes), power = 6,
@@ -132,6 +132,9 @@ head(moduleTraitCor)
 colnames(moduleTraitCor) <- c("M_Mock_0.25", "M_Mock_12", "M_Mock_24", "M_Pst_0.25", "M_Pst_12", "M_Pst_24", "Y_Mock_0.25", "Y_Mock_12", "Y_Mock_24", "Y_Pst_0.25", "Y_Pst_12", "Y_Pst_24")
 
 groupedByHpi = c(7,10,1,4,8,11,2,5,9,12,3,6)
+
+# set non-significant correlations to 0
+moduleTraitCor = moduleTraitCor * (moduleTraitPvalue < 0.05)
 
 corr_clust <- moduleTraitCor[module_clust$order, groupedByHpi]
 corr_clust <- moduleTraitCor[module_clust$order, sample_clust$order]

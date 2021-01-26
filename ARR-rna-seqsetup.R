@@ -1,6 +1,6 @@
 ##RNA-sequencing analysis for ARR
 #As a note before the coding begins, throughout the file I refer to samples which were collected at 0.25 hours-post infiltration (hpi) as 0. This was just to simplify the coding process
-
+options(java.parameters = "-Xmx2048m")
 options(java.parameters = "-Xmx1024m")
 library(DESeq2)
 library(RCurl)

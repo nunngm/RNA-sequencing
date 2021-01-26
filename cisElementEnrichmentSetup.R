@@ -11,6 +11,9 @@ setwd("C:\\Users\\Garrett\\OneDrive\\Documents\\Cameron Lab- McMaster University
 data = as.character(readDNAStringSet("TAIR10_upstream_500_20101028.txt"))
 names(data) = t(as.data.frame(strsplit(names(data), split = " |", fixed = T)))[, 1]
 
+genesOI = data[names(data) %in% SUGs]
+controlGenes = data[names(data) %in% rownames(counts(allData))]
+controlGenes = controlGenes[! names(controlGenes) %in% SUGs]
 
 genesOI = clustcolours[clustcolours %in% "purple"]
 controlGenes = clustcolours[! clustcolours %in% "purple"]

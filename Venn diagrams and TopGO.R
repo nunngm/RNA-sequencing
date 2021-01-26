@@ -231,11 +231,13 @@ temp = tmp
 temp = list(tmp[[1]]$accession, tmp[[2]]$accession, tmp[[3]]$accession)
 temp = list(microGenes, mature, young)
 
+tmp = lapply(hour, find.volcano)
+temp = lst(rownames(tmp[[1]][tmp[[1]]$de=="UP", ]), rownames(tmp[[2]][tmp[[2]]$de=="UP", ]), rownames(tmp[[3]][tmp[[3]]$de=="UP", ]))
 allGenes = c(temp[[1]], temp[[2]], temp[[3]])
 allGenes = unique(allGenes)
 
 venn.diagram(x = list(temp[[1]], temp[[2]], temp[[3]]),
-             category.names = c("Microarray","M.Pst-M.Mock","Y.Pst-Y.Mock"),
+             category.names = c("0.25 hpi","12 hpi","24 hpi"),
              filename = "temp.tiff",
              output = T,
              imagetype = "tiff",
@@ -251,10 +253,10 @@ venn.diagram(x = list(temp[[1]], temp[[2]], temp[[3]]),
 venn = draw.triple.venn(427,144,3705,2,35,318,2,category = c("Y.Pst>Y.Mock","M.Pst>M.Mock","M.Mock>Y.Mock"),fill = colors,lty=1,cex=2,cat.cex=2,cat.col="black",cat.dist = c(0.12, 0.12,0.04),margin =0.15,euler.d = F,scaled = F)
 
 #Specifies which part of the Venn diagram you would like to complete GO enrichment on
-geneList = as.integer(allGenes %in% temp[[1]])
+geneList = as.integer(allGenes %in% temp[[3]])
 names(geneList) = allGenes
-geneList[geneList==1] = as.integer(! names(geneList[geneList==1])%in% temp[[2]])
 geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% temp[[3]])
+geneList[geneList==1] = as.integer(! names(geneList[geneList==1])%in% temp[[3]])
 sum(geneList)
 
 getGeneName(names(geneList[geneList==1]))
@@ -264,7 +266,7 @@ geneList2 = as.factor(geneList)
 #geneList = as.factor(geneList) #This has to be a factor for TopGO
 
 #Instead of just comparing to an environment of DEGs this allow comparison to all genes (which have an average expression >10 reads).
-totalGenes = unique(c(names(goi_y),names(goi_m),names(goi_mock)))
+totalGenes = unique(rownames(tmp[[3]]))
 geneList2 = as.integer(totalGenes %in% names(geneList[geneList==1]))
 names(geneList2) = totalGenes
 sum(geneList2)
@@ -272,7 +274,7 @@ geneList2 = as.factor(geneList2)
 
 #Does the GO enrichment (BP, MF, or CC)
 GOdata <- new("topGOdata",
-              ontology = "BP", 
+              ontology = "MF", 
               allGenes = geneList2,  
               annotationFun = annFUN.gene2GO, 
               gene2GO = gene_GO) 
@@ -287,12 +289,12 @@ table_GO #A table of significant terms
 
 #A tree of the significant terms
 par(cex = 0.2)
-showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 20, useInfo = 'all')
+showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 11, useInfo = 'all')
 
 #GO term -> significant genes in goi list
 allGO = genesInTerm(GOdata)
 sigGenes = lapply(allGO,function(x) x[x %in% names(geneList[geneList==1])] )
-objectSymbol[sigGenes[["GO:0005634"]]]
+objectSymbol[sigGenes[["GO:0051082"]]]
 
 objectSymbol[names(geneList[geneList==1])]
 

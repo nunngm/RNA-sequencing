@@ -190,3 +190,6 @@ showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 15, useInfo = 'all')
 allGO = genesInTerm(GOdata)
 sigGenes = lapply(allGO,function(x) x[x %in% names(geneList[geneList==1])] )
 objectSymbol[sigGenes[["GO:0140096"]]]
+
+
+#___________________________ Print genes _____________

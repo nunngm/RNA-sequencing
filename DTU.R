@@ -2,6 +2,7 @@
 
 library(tximport)
 library(GenomicFeatures)
+library(topGO)
 
 
 #laptop directory
@@ -22,7 +23,7 @@ gene_associations <- gene_associations[,c(2,3,5,7,9,14)]
 gene_GO <- readMappings("TAIR_to_GO.delim")
 
 #Collect filenames and label samples
-files = file.path("salmon_quant", list.dirs("salmon_quant")[-1], "quant.sf") #[-1] is to ignore the salmon_quant directory
+files = file.path(list.dirs("salmon_quant", recursive=F)[], "quant.sf") #[-1] is to ignore the salmon_quant directory
 
 # Samples in alphabetical order
 samples <- c("m_mg_0h_s1", "m_mg_0h_s2","m_mg_0h_s3","m_mg_12h_s1","m_mg_12h_s2","m_mg_12h_s3","m_mg_24h_s1","m_mg_24h_s2","m_mg_24h_s3","m_pst_0h_s1","m_pst_0h_s2","m_pst_0h_s3","m_pst_12h_s1","m_pst_12h_s2","m_pst_12h_s3","m_pst_24h_s1","m_pst_24h_s2","m_pst_24h_s3","y_mg_0h_s1","y_mg_0h_s2","y_mg_0h_s3","y_mg_12h_s1","y_mg_12h_s2","y_mg_12h_s3","y_mg_24h_s1","y_mg_24h_s2","y_mg_24h_s3","y_pst_0h_s1","y_pst_0h_s2","y_pst_0h_s3","y_pst_12h_s1","y_pst_12h_s2","y_pst_12h_s3","y_pst_24h_s1","y_pst_24h_s2","y_pst_24h_s3")
@@ -49,7 +50,7 @@ cts = txi$counts
 cts = cts[rowSums(cts) > 0, ] # throw out any transcript with no reads
 
 #Make TxDb database (only needed once)
-gtf = "./arabidopsisReference/Araport11_GFF3_genes_transposons.201606.gff.gz"
+gtf = "./arabidopsisReference/Arabidopsis_thaliana.TAIR10.49.gff3.gz"
 txdb.filename = "./arabidopsisReference/araport11.201606.annotation.sqlite"
 txdb = makeTxDbFromGFF(gtf)
 saveDb(txdb, txdb.filename)

@@ -233,6 +233,9 @@ temp = list(microGenes, mature, young)
 
 tmp = lapply(hour, find.volcano)
 temp = lst(rownames(tmp[[1]][tmp[[1]]$de=="UP", ]), rownames(tmp[[2]][tmp[[2]]$de=="UP", ]), rownames(tmp[[3]][tmp[[3]]$de=="UP", ]))
+allGenes = rownames(tmp[[1]])
+
+
 allGenes = c(temp[[1]], temp[[2]], temp[[3]])
 allGenes = unique(allGenes)
 
@@ -253,10 +256,10 @@ venn.diagram(x = list(temp[[1]], temp[[2]], temp[[3]]),
 venn = draw.triple.venn(427,144,3705,2,35,318,2,category = c("Y.Pst>Y.Mock","M.Pst>M.Mock","M.Mock>Y.Mock"),fill = colors,lty=1,cex=2,cat.cex=2,cat.col="black",cat.dist = c(0.12, 0.12,0.04),margin =0.15,euler.d = F,scaled = F)
 
 #Specifies which part of the Venn diagram you would like to complete GO enrichment on
-geneList = as.integer(allGenes %in% temp[[3]])
+geneList = as.integer(allGenes %in% temp[[1]])
 names(geneList) = allGenes
-geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% temp[[3]])
-geneList[geneList==1] = as.integer(! names(geneList[geneList==1])%in% temp[[3]])
+geneList[geneList==0] = as.integer( names(geneList[geneList==0])%in% temp[[2]])
+geneList[geneList==0] = as.integer( names(geneList[geneList==0])%in% temp[[3]])
 sum(geneList)
 
 getGeneName(names(geneList[geneList==1]))
@@ -266,7 +269,7 @@ geneList2 = as.factor(geneList)
 #geneList = as.factor(geneList) #This has to be a factor for TopGO
 
 #Instead of just comparing to an environment of DEGs this allow comparison to all genes (which have an average expression >10 reads).
-totalGenes = unique(rownames(tmp[[3]]))
+totalGenes = unique(rownames(tmp[[2]]))
 geneList2 = as.integer(totalGenes %in% names(geneList[geneList==1]))
 names(geneList2) = totalGenes
 sum(geneList2)
@@ -274,7 +277,7 @@ geneList2 = as.factor(geneList2)
 
 #Does the GO enrichment (BP, MF, or CC)
 GOdata <- new("topGOdata",
-              ontology = "MF", 
+              ontology = "CC", 
               allGenes = geneList2,  
               annotationFun = annFUN.gene2GO, 
               gene2GO = gene_GO) 
@@ -284,9 +287,47 @@ fisher_GO <- getSigGroups(GOdata, fisher_test)
 fisher_GO
 
 #Lets see the most significant ones
-table_GO <- GenTable(GOdata, Fisher = fisher_GO, topNodes = 50)
+table_GO <- GenTable(GOdata, Fisher = fisher_GO, orderBy = "Fisher" ,topNodes = 30)
 table_GO #A table of significant terms
+table_GO$Fisher = as.numeric(table_GO$Fisher)
+table_GO = table_GO[table_GO$Fisher<0.05, ]
+table_GO = table_GO[, c("GO.ID", "Term", "Fisher")]
+table_GO$Term <- factor(table_GO$Term, levels=rev(table_GO$Term))
 
+ggplot(table_GO, aes(x=Term, y=-log10(Fisher))) +
+    stat_summary(geom = "bar", fun = mean, position = "dodge") +
+    xlab("Biological process") +
+    ylab("Enrichment") +
+    ggtitle("Title") +
+    scale_y_continuous(breaks = round(seq(0, max(-log10(table_GO$Fisher)), by = 2), 1)) +
+    theme_bw(base_size=24) +
+    theme(
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position='none',
+        legend.background=element_rect(),
+        plot.title=element_text(angle=0, size=24, face="bold", vjust=1),
+        axis.text.x=element_text(angle=0, size=10, face="bold", hjust=1.10),
+        axis.text.y=element_text(angle=0, size=10, face="bold", vjust=0.5),
+        axis.title=element_text(size=24, face="bold"),
+        legend.key=element_blank(),     #removes the border
+        legend.key.size=unit(1, "cm"),      #Sets overall area/size of the legend
+        legend.text=element_text(size=18),  #Text size
+        title=element_text(size=18)) +
+    guides(colour=guide_legend(override.aes=list(size=2.5))) +
+    coord_flip()
+
+
+        
+results.ks <- runTest(GOdata, algorithm="classic", statistic="ks")
+goEnrichment <- GenTable(GOdata, KS=results.ks, orderBy="KS", topNodes=20)
+goEnrichment$KS <- as.numeric(goEnrichment$KS)
+goEnrichment <- goEnrichment[goEnrichment$KS<0.05,]
+goEnrichment <- goEnrichment[,c("GO.ID","Term","KS")]
+goEnrichment$Term <- gsub(" [a-z]*\\.\\.\\.$", "", goEnrichment$Term)
+goEnrichment$Term <- gsub("\\.\\.\\.$", "", goEnrichment$Term)
+goEnrichment$Term <- paste(goEnrichment$GO.ID, goEnrichment$Term, sep=", ")
+goEnrichment$Term <- factor(goEnrichment$Term, levels=rev(goEnrichment$Term))
 #A tree of the significant terms
 par(cex = 0.2)
 showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 11, useInfo = 'all')
@@ -339,3 +380,15 @@ venn.diagram(x = list(sg_y,sg_m,sg_mock),
              cat.cex = 2,
              cat.dist = c(0.12, 0.12,0.04),
              margin =0.15)
+
+___________#Plotting Go results
+
+results.ks <- runTest(GOdata, algorithm="classic", statistic="ks")
+goEnrichment <- GenTable(GOdata, KS=results.ks, orderBy="KS", topNodes=20)
+goEnrichment$KS <- as.numeric(goEnrichment$KS)
+goEnrichment <- goEnrichment[goEnrichment$KS<0.05,]
+goEnrichment <- goEnrichment[,c("GO.ID","Term","KS")]
+goEnrichment$Term <- gsub(" [a-z]*\\.\\.\\.$", "", goEnrichment$Term)
+goEnrichment$Term <- gsub("\\.\\.\\.$", "", goEnrichment$Term)
+goEnrichment$Term <- paste(goEnrichment$GO.ID, goEnrichment$Term, sep=", ")
+goEnrichment$Term <- factor(goEnrichment$Term, levels=rev(goEnrichment$Term))

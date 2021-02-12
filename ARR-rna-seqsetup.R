@@ -338,17 +338,26 @@ find.unique = function(hpi, reverse = F, down = F ){
 }
 
 ## Collect data for volcano plot 
-find.volcano = function(hour, n = 15, de = 0, lfc.cut = log2(1.5), adjp.cut = 0.05) {
+find.volcano = function(hour, n = 15, de = 0, lfc.cut = log2(1.5), adjp.cut = 0.05, SUGs = F) {
         temp = compare.group(hpi= hour)
         data = temp[[4]] #M.Pst-Y.Pst
         
         #Select for the genes which are differentially expressed in M.Pst-M.Mock and M.Pst-Y.Pst and remove genes differentially expressed in Y.Pst-Y.Mock. Using the inverse of fisher's method
         data$padj =  -2*(log(1-temp[[4]]$padj)+log(1-temp[[2]]$padj)+log(temp[[1]]$padj))
+        if (SUGs == T){
+                data$padj =  -2*(log(1-temp[[4]]$padj)+log(temp[[2]]$padj)+log(1-temp[[1]]$padj))
+        }
         data$padj =  pchisq(data$padj,2*3) #Uses the inverse of fisher's method to basically discount samples which aren't: 1. Differentiall expressed in mature plants 2. differentially expressed in M.Pst compared to Y.Pst 3. Are not differentially expressed in Y.Pst compared to Y.Mock
         
         data$de = "NO" #de = differentially expressed
-        data$de[data$log2FoldChange > lfc.cut & data$padj < adjp.cut] <- "UP"
-        data$de[data$log2FoldChange < -lfc.cut & data$padj < adjp.cut] = "DOWN"
+        if (SUGs == F){
+                data$de[data$log2FoldChange > lfc.cut & data$padj < adjp.cut] <- "UP"
+                data$de[data$log2FoldChange < -lfc.cut & data$padj < adjp.cut] = "DOWN"    
+        } else{
+                data$de[data$log2FoldChange > lfc.cut & data$padj < adjp.cut] <- "DOWN"
+                data$de[data$log2FoldChange < -lfc.cut & data$padj < adjp.cut] = "UP"  
+        }
+
         mycolors <- c("blue", "red", "black")
         names(mycolors) <- c("DOWN", "UP", "NO")
         data$gene_symbol = getGeneName(rownames(data))

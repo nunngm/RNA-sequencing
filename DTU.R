@@ -3,6 +3,7 @@
 library(tximport)
 library(GenomicFeatures)
 library(topGO)
+library(DRIMSeq)
 
 
 #laptop directory
@@ -49,8 +50,37 @@ txi = tximport(files, type = "salmon",txOut = T, countsFromAbundance = "scaledTP
 cts = txi$counts
 cts = cts[rowSums(cts) > 0, ] # throw out any transcript with no reads
 
-#Make TxDb database (only needed once)
-gtf = "./arabidopsisReference/Arabidopsis_thaliana.TAIR10.49.gff3.gz"
 txdb.filename = "./arabidopsisReference/araport11.201606.annotation.sqlite"
-txdb = makeTxDbFromGFF(gtf)
-saveDb(txdb, txdb.filename)
+# #Make TxDb database (only needed once)
+# gtf = "./arabidopsisReference/Arabidopsis_thaliana.TAIR10.49.gff3.gz"
+# txdb = makeTxDbFromGFF(gtf)
+# saveDb(txdb, txdb.filename)
+
+# Load txDB file
+txdb <- loadDb(txdb.filename)
+
+txdf <- select(txdb, keys(txdb, "CDSNAME"), "GENEID", "CDSNAME")
+txdf[ is.na(txdf$GENEID), 2] = unlist(strsplit(txdf[ is.na(txdf$GENEID), 1], split = "[.][0-9]*")) # To capture those genes which dont have a geneID/gene name
+tab <- table(txdf$GENEID)
+txdf$ntx <- tab[match(txdf$GENEID, names(tab))]
+
+# Range of # of reads across files (in millions)
+range(colSums(cts)/1e6)
+
+# There are still 35 genes which appear in one of the data sets but not the other so I am just going to remove them (Maybe ensembl is out of date I have no other idea why this is happening)
+cts = cts[rownames(cts) %in% txdf$CDSNAME, ]
+
+txdf <- txdf[match(rownames(cts),txdf$CDSNAME),]
+all(rownames(cts) == txdf$TXNAME)
+
+# Set-up for drimSEQ
+counts <- data.frame(gene_id=txdf$GENEID,
+                     feature_id=txdf$CDSNAME,
+                     cts)
+# Make sample dataframe
+samps = as.data.frame(cbind(rownames(design_full), paste(as.character(design_full[ ,3]), as.character(design_full[, 4]), as.character(design_full[, 5]) ,sep = "_")))
+class(samps)
+
+colnames(samps) = c("sample_id", "group")
+
+d <- dmDSdata(counts=counts, samples=samps)

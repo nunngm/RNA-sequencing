@@ -231,10 +231,12 @@ temp = tmp
 temp = list(tmp[[1]]$accession, tmp[[2]]$accession, tmp[[3]]$accession)
 temp = list(microGenes, mature, young)
 
-tmp = lapply(hour, find.volcano)
+tmp = lapply(hour, find.volcano, SUGs = F)
 temp = lst(rownames(tmp[[1]][tmp[[1]]$de=="UP", ]), rownames(tmp[[2]][tmp[[2]]$de=="UP", ]), rownames(tmp[[3]][tmp[[3]]$de=="UP", ]))
-allGenes = rownames(tmp[[1]])
+temp = lst(rownames(tmp[[1]][tmp[[1]]$de=="DOWN", ]), rownames(tmp[[2]][tmp[[2]]$de=="DOWN", ]), rownames(tmp[[3]][tmp[[3]]$de=="DOWN", ]))
+allGenes = rownames(tmp[[2]])
 
+temp = unique(c(temp[[1]], temp[[2]], temp[[3]]))
 
 allGenes = c(temp[[1]], temp[[2]], temp[[3]])
 allGenes = unique(allGenes)
@@ -256,8 +258,9 @@ venn.diagram(x = list(temp[[1]], temp[[2]], temp[[3]]),
 venn = draw.triple.venn(427,144,3705,2,35,318,2,category = c("Y.Pst>Y.Mock","M.Pst>M.Mock","M.Mock>Y.Mock"),fill = colors,lty=1,cex=2,cat.cex=2,cat.col="black",cat.dist = c(0.12, 0.12,0.04),margin =0.15,euler.d = F,scaled = F)
 
 #Specifies which part of the Venn diagram you would like to complete GO enrichment on
-geneList = as.integer(allGenes %in% temp[[1]])
+geneList = as.integer(allGenes %in% temp[[2]])
 names(geneList) = allGenes
+
 geneList[geneList==0] = as.integer( names(geneList[geneList==0])%in% temp[[2]])
 geneList[geneList==0] = as.integer( names(geneList[geneList==0])%in% temp[[3]])
 sum(geneList)
@@ -277,7 +280,7 @@ geneList2 = as.factor(geneList2)
 
 #Does the GO enrichment (BP, MF, or CC)
 GOdata <- new("topGOdata",
-              ontology = "CC", 
+              ontology = "BP", 
               allGenes = geneList2,  
               annotationFun = annFUN.gene2GO, 
               gene2GO = gene_GO) 
@@ -287,19 +290,33 @@ fisher_GO <- getSigGroups(GOdata, fisher_test)
 fisher_GO
 
 #Lets see the most significant ones
-table_GO <- GenTable(GOdata, Fisher = fisher_GO, orderBy = "Fisher" ,topNodes = 30)
+table_GO <- GenTable(GOdata, Fisher = fisher_GO, orderBy = "Fisher" ,topNodes = 45)
 table_GO #A table of significant terms
 table_GO$Fisher = as.numeric(table_GO$Fisher)
 table_GO = table_GO[table_GO$Fisher<0.05, ]
 table_GO = table_GO[, c("GO.ID", "Term", "Fisher")]
+
+newName = c("defense response", "resp. to biotic stim.", "resp. to ext. biotic stim.", "resp. to other organism", "def. resp. to other org.", "interspecies interaction", "immune system process", "protein phosphorylation", "response to stress", "response to drug", "resp. to external stim.", "resp. to bacterium", "phosphorylation", "def. resp. to bacterium", "immune response", "innate immune response", "signal transduction", "signaling", "cell communication", "response to stimulus")
+
+newName = c("cell periphery", "plasma membrane", "clathrin-coated vesicle memb.", "clathrin adaptor complex", "membrane", "clathrin-coated vesicle", "vesicle tethering complex", "exocyst", "clathrin coat", "clathrin adaptor", "clathrin-coated pit", "extracellular region", "golgi transport complex", "intrinsic comp. of memb.", "clathrin vesicle coat", "phagocytic vesicle", "pollen tube", "coated vesicle memb.", "integral comp. of memb.", "PeBoW complex")
+
+newName = c("response to hormone", "resp. to endogenous stim.", "resp. to organic substance", "response to chemical", "hormone-mediated signaling", "cell. resp. to hormone stim.", "response to lipid", "cell. resp. to endogenous stim.", "resp. to exygen-containing comp.", "brassinosteroid metabolism", "resp. to jasmonic acid", "resp. to acid chemical", "steroid meta. proc.", "reg. of hormone levels", "cell. resp. to lipid", "organic hydroxy comp. meta.", "cell. resp. to organic sub.", "phytosteroid meta.", "cell. resp. to chem. stim.", "monocarboxylic acid cata.")
+
+newName = c("O-glycosyl hydrolase", "glycosyl hydrolase", "FAD binding", "ion chan. inhib.", "channel inhibitor", "ion chan. regulator", "sucrose permease", "MeIAA esterase", "channel regulator", "glycosyltransferase", "disacch. transporter", "BADH activity", "L-alanine transporter", "GABA transporter", "alanine transporter", "CH-CH donor oxidored.", "struct. comp. of cytoskeleton", "aldehyde don., NAD acc. oxidored.", "oligosaccharide transporter", "neurotransmitter transporter")
+
+length(newName)
+table_GO$Term = newName
 table_GO$Term <- factor(table_GO$Term, levels=rev(table_GO$Term))
 
+
+pdf("AUGs CC.pdf",height = 7, width = 7)
 ggplot(table_GO, aes(x=Term, y=-log10(Fisher))) +
-    stat_summary(geom = "bar", fun = mean, position = "dodge") +
-    xlab("Biological process") +
-    ylab("Enrichment") +
-    ggtitle("Title") +
+    stat_summary(geom = "bar", fun = mean) +
+    xlab("Cellular component") +
+    ylab("Enrichment (-log10(p-val))") +
+    # scale_y_reverse(breaks = round(seq(0, max(-log10(table_GO$Fisher)), by = 2), 1)) +
     scale_y_continuous(breaks = round(seq(0, max(-log10(table_GO$Fisher)), by = 2), 1)) +
+    scale_x_discrete(position = "top") +
     theme_bw(base_size=24) +
     theme(
         panel.grid.major = element_blank(),
@@ -307,35 +324,26 @@ ggplot(table_GO, aes(x=Term, y=-log10(Fisher))) +
         legend.position='none',
         legend.background=element_rect(),
         plot.title=element_text(angle=0, size=24, face="bold", vjust=1),
-        axis.text.x=element_text(angle=0, size=10, face="bold", hjust=1.10),
-        axis.text.y=element_text(angle=0, size=10, face="bold", vjust=0.5),
-        axis.title=element_text(size=24, face="bold"),
+        axis.text.x=element_text(angle=0, size=14, face="bold", hjust=1.10),
+        axis.text.y=element_text(angle=0, size=14, face="bold", vjust=0.5),
+        axis.title=element_text(size=16, face="bold"),
         legend.key=element_blank(),     #removes the border
         legend.key.size=unit(1, "cm"),      #Sets overall area/size of the legend
         legend.text=element_text(size=18),  #Text size
         title=element_text(size=18)) +
     guides(colour=guide_legend(override.aes=list(size=2.5))) +
-    coord_flip()
-
+    coord_flip() 
+dev.off()
 
         
-results.ks <- runTest(GOdata, algorithm="classic", statistic="ks")
-goEnrichment <- GenTable(GOdata, KS=results.ks, orderBy="KS", topNodes=20)
-goEnrichment$KS <- as.numeric(goEnrichment$KS)
-goEnrichment <- goEnrichment[goEnrichment$KS<0.05,]
-goEnrichment <- goEnrichment[,c("GO.ID","Term","KS")]
-goEnrichment$Term <- gsub(" [a-z]*\\.\\.\\.$", "", goEnrichment$Term)
-goEnrichment$Term <- gsub("\\.\\.\\.$", "", goEnrichment$Term)
-goEnrichment$Term <- paste(goEnrichment$GO.ID, goEnrichment$Term, sep=", ")
-goEnrichment$Term <- factor(goEnrichment$Term, levels=rev(goEnrichment$Term))
 #A tree of the significant terms
 par(cex = 0.2)
-showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 11, useInfo = 'all')
+showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 20, useInfo = 'all')
 
 #GO term -> significant genes in goi list
 allGO = genesInTerm(GOdata)
 sigGenes = lapply(allGO,function(x) x[x %in% names(geneList[geneList==1])] )
-objectSymbol[sigGenes[["GO:0051082"]]]
+objectSymbol[sigGenes[["GO:0006952"]]]
 
 objectSymbol[names(geneList[geneList==1])]
 

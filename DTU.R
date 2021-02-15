@@ -4,6 +4,9 @@ library(tximport)
 library(GenomicFeatures)
 library(topGO)
 library(DRIMSeq)
+library(AnnotationDbi)
+library(dplyr)
+set.seed(31138)
 
 
 #laptop directory
@@ -51,15 +54,16 @@ cts = txi$counts
 cts = cts[rowSums(cts) > 0, ] # throw out any transcript with no reads
 
 txdb.filename = "./arabidopsisReference/araport11.201606.annotation.sqlite"
-# #Make TxDb database (only needed once)
-# gtf = "./arabidopsisReference/Arabidopsis_thaliana.TAIR10.49.gff3.gz"
-# txdb = makeTxDbFromGFF(gtf)
-# saveDb(txdb, txdb.filename)
+#Make TxDb database (only needed once)
+gtf = "./arabidopsisReference/Arabidopsis_thaliana.TAIR10.49.gff3"
+txdb = makeTxDbFromGFF(gtf)
+saveDb(txdb, txdb.filename)
 
 # Load txDB file
 txdb <- loadDb(txdb.filename)
 
-txdf <- select(txdb, keys(txdb, "CDSNAME"), "GENEID", "CDSNAME")
+# Make sure dplyr is un
+txdf <- AnnotationDbi::select(txdb, keys(txdb, "CDSNAME"), "GENEID", "CDSNAME")
 txdf[ is.na(txdf$GENEID), 2] = unlist(strsplit(txdf[ is.na(txdf$GENEID), 1], split = "[.][0-9]*")) # To capture those genes which dont have a geneID/gene name
 tab <- table(txdf$GENEID)
 txdf$ntx <- tab[match(txdf$GENEID, names(tab))]
@@ -84,3 +88,29 @@ class(samps)
 colnames(samps) = c("sample_id", "group")
 
 d <- dmDSdata(counts=counts, samples=samps)
+methods(class =class(d))
+
+# set up filtering for DTU, n is the total sample number, n.small is the sample size of the smallest group
+n = 36
+n.small = 3
+
+d <- dmFilter(d,
+min_samps_feature_expr=n.small, min_feature_expr=10, #transcript must have a count of at least 10 in n.small number of samples
+min_samps_feature_prop=n.small, min_feature_prop=0.05, #this transcript must have a relative abundance of 5% in at leasr n.small samples
+min_samps_gene_expr=n, min_gene_expr=10) # The total count of the corresponding gene must be 10 in all 10 samples
+
+# went from 43,527 transcripts to 16,648 transcripts (with multiple transcripts), genes were only one transcript is observed are removed from this object, which makes sense, since we are testing for differential transcript usage
+
+table(table(counts(d)$gene_id))
+
+factor()
+design <- model.matrix(~0+group, data=DRIMSeq::samples(d))
+colnames(design)
+
+tmp = d[1:500, ]
+16648/500
+system.time({
+tmp <- dmPrecision(tmp, design=design)
+tmp <- dmFit(tmp, design=design)
+tmp <- dmTest(tmp, coef="groupm_pst_12")
+})

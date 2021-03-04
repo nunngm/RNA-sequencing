@@ -46,6 +46,50 @@ heatmap.2(mat, Rowv=as.dendrogram(hc),
 dev.off() #closes the file
 
 ##Begin intense heatmapping here
+#Code for figure 1
+allComp = compare.group()
+thresh = 0.05
+lfc = 1
+genes_of_interest = unique(c(rownames(allComp$ypst0ymg0[allComp$ypst0ymg0$padj < thresh & abs(allComp$ypst0ymg0$log2FoldChange) > lfc, ]), rownames(allComp$ypst12ymg12[allComp$ypst12ymg12$padj < thresh & abs(allComp$ypst12ymg12$log2FoldChange) > lfc, ]), rownames(allComp$ypst24ymg24[allComp$ypst24ymg24$padj < thresh & abs(allComp$ypst24ymg24$log2FoldChange) > lfc, ]), rownames(allComp$mpst0mmg0[allComp$mpst0mmg0$padj < thresh & abs(allComp$mpst0mmg0$log2FoldChange) > lfc, ]), rownames(allComp$mpst12mmg12[allComp$mpst12mmg12$padj < thresh & abs(allComp$mpst12mmg12$log2FoldChange) > lfc, ]), rownames(allComp$mpst24mmg24[allComp$mpst24mmg24$padj < thresh & abs(allComp$mpst24mmg24$log2FoldChange) > lfc, ]) ))
+
+genes_of_interest = unique(c(rownames(allComp$ypst0ymg0[allComp$ypst0ymg0$padj < thresh & abs(allComp$ypst0ymg0$log2FoldChange) > lfc, ]), rownames(allComp$ypst12ymg12[allComp$ypst12ymg12$padj < thresh & abs(allComp$ypst12ymg12$log2FoldChange) > lfc, ]), rownames(allComp$ypst24ymg24[allComp$ypst24ymg24$padj < thresh & abs(allComp$ypst24ymg24$log2FoldChange) > lfc, ]) ))
+
+genes_of_interest = unique(c( rownames(allComp$mpst0mmg0[allComp$mpst0mmg0$padj < thresh & abs(allComp$mpst0mmg0$log2FoldChange) > lfc, ]), rownames(allComp$mpst12mmg12[allComp$mpst12mmg12$padj < thresh & abs(allComp$mpst12mmg12$log2FoldChange) > lfc, ]), rownames(allComp$mpst24mmg24[allComp$mpst24mmg24$padj < thresh & abs(allComp$mpst24mmg24$log2FoldChange) > lfc, ]) ))
+
+mpstcomp = list(results(allData,contrast = c("group", "mpst0", "ymg0"), alpha = 0.05, pAdjustMethod="BH", tidy = T), results(allData,contrast = c("group", "mpst12", "ymg12"), alpha = 0.05, pAdjustMethod="BH", tidy = T), results(allData,contrast = c("group", "mpst24", "ymg24"), alpha = 0.05, pAdjustMethod="BH", tidy = T))
+
+GOI = rownames(allComp$ypst0ymg0) %in% genes_of_interest
+
+finalLFC = cbind(allComp$ypst0ymg0[GOI, 2], allComp$mmg0ymg0[GOI,2], mpstcomp[[1]][GOI, 3], allComp$ypst12ymg12[GOI, 2], allComp$mmg12ymg12[GOI, 2], mpstcomp[[2]][GOI, 3], allComp$ypst24ymg24[GOI, 2], allComp$mmg24ymg24[GOI, 2], mpstcomp[[3]][GOI, 3])
+
+rownames(finalLFC) = rownames(allComp$ypst0ymg0)[rownames(allComp$ypst0ymg0) %in% genes_of_interest]
+colnames(finalLFC) = c("Y.Pst", "M.Mock", "M.Pst","Y.Pst", "M.Mock", "M.Pst", "Y.Pst", "M.Mock", "M.Pst" )
+
+
+#Working on
+
+
+#worked
+hmcol1 = sequential_hcl(n = 10, h = 70, c = 200, l = c(150,20), power = 0.8, rev = T)
+show_col(hmcol1)
+hmcol2 = sequential_hcl(n = 10, h = 230, c = 80, l = c(80,20), power = 0.4)
+show_col(hmcol2)
+hmcol = c(hmcol2[1:9], "#000000", hmcol1[2:10]) 
+show_col(hmcol)
+
+tiff("rplot2.tiff", width = 4000, height = 2000)
+aheatmap(finalLFC, color = hmcol, Rowv = T, Colv = NA, distfun= "euclidean",treeheight = 200,hclustfun = "average", scale = "none", cellwidth = 320, breaks =0)
+dev.off()
+
+pdf()
+heatmap.2(finalLFC, Rowv=T, Colv = F,
+          trace="none", col = hmcol,
+          lhei = c(1,8), lwid = c(0.5,4),
+          cexRow = 0.25, cexCol = 2,
+          margin=c(10,9))
+dev.off()
+
+
 
 #Make a dataframe with the average normailized count number for each of the samples
 allData = estimateSizeFactors(allData)

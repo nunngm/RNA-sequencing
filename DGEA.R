@@ -34,12 +34,13 @@ hpi = factor(rep(24, 6), levels = c(24)) #Hours post infiltration
 design_full <- data.frame(sample=names(files),
                           file=files,
                           infection =infection,
-                          hpi=hpi
+                          hpi=hpi,
+                          batch = factor(c(1,2,2,1,2,2), levels = c(1,2))
 )
 design_full
 
 ##Very general model that just has all the sample information
-model_full <- formula(~infection)
+model_full <- formula(~infection+batch)
 rawData <- DESeqDataSetFromHTSeqCount(design_full,design=model_full)
 
 
@@ -55,18 +56,119 @@ rawData <- rawData[keep,]
 # Build DESeq object based on distinct treatment groups
 rawData@design = ~group
 ptiData <- DESeq(rawData)
+
+#Analyze the quality of the pti data set
+hmcol = hcl_palettes(palette = "Berlin") #Setting the colour palatte
+for_pca <- rlog(ptiData, blind=F)
+rlogMat <- assay(for_pca) # just making a matrix of the counts that have been corrected for over-dispersion in a "blind" fashion
+
+distsRL <- dist(t(rlogMat)) # Computes a distance matrix (Euclidian Distance)
+mat <- as.matrix(distsRL)  # Make sure it is a matrix
+
+
+infection = c(rep("hrcC-",3),rep("Mock",3))
+infection <- as.factor(infection)
+length(infection)
+batch = factor(c(1,2,2,1,2,2), levels = c(1,2))
+
+rownames(mat) <- colnames(mat) <-   with(colData(ptiData), paste( infection, paste0(hpi, "h"), batch, sep=":"))
+
+hc <- hclust(distsRL
+             ,method = "average"
+)  # performs hierarchical clustering
+par(mar=c(7,4,4,2)+0.1)
+hmcol <- colorRampPalette(brewer.pal(9, "GnBu"))(100)# picking our colours
+
+tiff(filename = "heatmap.tiff", height = 1080, width = 1280) #opens a tiff device
+heatmap.2(mat, Rowv=as.dendrogram(hc),
+          symm=T, trace="none",
+          cexRow = 2,
+          cexCol = 2,
+          col = rev(hmcol), margin=c(13,9)) #prints to tiff
+dev.off()
+
+
+p =plotPCA(for_pca, ntop = 10000,
+           intgroup=c("infection","hpi", "batch"))
+
+p =p+geom_point(aes(size=1)) +guides(colour = guide_legend(override.aes = list(size = 8)))+theme(panel.grid.major = element_blank(), 
+                                                                                                 panel.grid.minor = element_blank(),
+                                                                                                 panel.background = element_blank(), 
+                                                                                                 axis.line = element_line(colour = "black", size=1),
+                                                                                                 axis.title.x=element_text(size=15),
+                                                                                                 #axis.text.x=element_blank()),
+                                                                                                 axis.ticks=element_line(colour = "black", size =1),
+                                                                                                 axis.ticks.length = unit(5,"points") ,
+                                                                                                 axis.title.y = element_text(size=15),
+                                                                                                 legend.position = "right",
+                                                                                                 axis.text = element_text(size=15),
+                                                                                                 legend.text = element_text(size=15)
+)
+
+
+
+
+##DGE analysis
 sigGenes_pti= results(ptiData, contrast = c("group", "hrc24", "mock24"), tidy = T)
 sigGenes_pti = sigGenes_pti[ is.na(sigGenes_pti$padj) == F,]
-sigGenes_pti = sigGenes_pti[sigGenes_pti$log2FoldChange > 0.58  & sigGenes_pti$padj < 0.05,]
+sigGenes_pti = sigGenes_pti[sigGenes_pti$log2FoldChange > 0.58  & sigGenes_pti$pvalue < 0.05,]
 objectSymbol[sigGenes_pti$row]
 
-sigGenes_m = results(allData,contrast = c("group","mpst12","mmg12"),alpha =0.05, pAdjustMethod = "BH", tidy = T)
 sigGenes_m = sigGenes_m$row[sigGenes_m$log2FoldChange > 1]
 
 for (i in myList) {
         i = i$row[i < 0.05 & i$log2FoldChange > 1]
 }
 
+view.gene.allDef = function(accession, fileName = objectSymbol[toupper(accession)], hour = "24", graph = F){
+        geneCount <- plotCounts(allData, gene = toupper(accession), 
+                                intgroup = c("age", "infection","hpi"), returnData = TRUE)
+        geneCount = geneCount[geneCount$hpi == hour, ]
+        colnames(geneCount)[2] = "type"
+        
+        # If we have the data for the pti experiment include it in this graph
+        if (hour == "24" ){
+                pti = plotCounts(ptiData, gene = toupper(accession), intgroup = c("infection", "hpi"), returnData = T)
+                pti = as.data.frame(append( pti, list(rep("pti", 6)), after = 1), col.names = c("count", "type", "infection", "hpi"), row.names = rownames(pti))
+                
+                geneCount = rbind(geneCount, pti)
+                rm(pti)
+        }
+        
+        #
+
+        geneCount = cbind(geneCount, paste0(as.character(geneCount$age), as.character(geneCount$infection)))
+        colnames(geneCount)[ncol(geneCount)] = "ageinf"
+        
+        p = ggplot(geneCount,
+                   aes(x = hpi, y = count, color = factor(age, levels = c("y", "m")), lty = factor(infection, levels = c("mg", "pst")), group = ageinf )) +
+                #geom_point() + #displays individual counts
+                stat_summary(fun=mean, geom="line", size = 1) + 
+                stat_summary(fun = mean,
+                             fun.min = function(x) {mean(x) - sd(x)}, 
+                             fun.max = function(x) {mean(x) + sd(x)}, 
+                             geom = "pointrange", lty =1 , size =1)+theme(panel.grid.major = element_blank(), 
+                                                                          panel.grid.minor = element_blank(),
+                                                                          panel.background = element_blank(), 
+                                                                          axis.line = element_line(colour = "black", size=1),
+                                                                          axis.title.x=element_text(size=15),
+                                                                          #axis.text.x=element_blank()),
+                                                                          axis.ticks=element_line(colour = "black", size =1),
+                                                                          axis.ticks.length = unit(5,"points") ,
+                                                                          axis.title.y = element_text(size=15),
+                                                                          legend.position = "right",
+                                                                          axis.text = element_text(size=15),
+                                                                          legend.text = element_text(size=15)
+                             ) + ggtitle(fileName)
+        if (graph == T){
+                ggsave(paste0(fileName, ".png"), plot = p)
+                
+                p
+                
+        } else {
+                p  
+        }
+}
 
 
 res_m = results(allData,contrast = c("group","mpst24","mmg24"),alpha =0.05, pAdjustMethod = "BH")

@@ -242,7 +242,7 @@ allGenes = c(temp[[1]], temp[[2]], temp[[3]])
 allGenes = unique(allGenes)
 
 venn.diagram(x = list(temp[[1]], temp[[2]], temp[[3]]),
-             category.names = c("0.25 hpi","12 hpi","24 hpi"),
+             category.names = c("DC3000","Mature","Young"),
              filename = "temp.tiff",
              output = T,
              imagetype = "tiff",

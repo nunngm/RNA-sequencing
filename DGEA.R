@@ -45,8 +45,8 @@ rawData <- DESeqDataSetFromHTSeqCount(design_full,design=model_full)
 
 
 ## Grouping all the experimental variables into distinct treatment groups
-rawData$group <- factor(paste0(rawData$infection,rawData$hpi))
-rawData$group = factor(rawData$group,levels=c("mock24","hrc24"))
+rawData$group <- factor(paste0(rawData$infection,rawData$hpi, rawData$batch))
+rawData$group = factor(rawData$group,levels=c("mock242","hrc242", "mock241", "hrc241"))
 
 # Filter lowly expressed genes
 keep <- rowMeans(counts(rawData)) >= 10 #Genes which on average have less than 10 reads
@@ -69,22 +69,22 @@ mat <- as.matrix(distsRL)  # Make sure it is a matrix
 infection = c(rep("hrcC-",3),rep("Mock",3))
 infection <- as.factor(infection)
 length(infection)
-batch = factor(c(1,2,2,1,2,2), levels = c(1,2))
+batch = factor(c(1,2,3,1,2,3), levels = c(1,2,3))
 
 rownames(mat) <- colnames(mat) <-   with(colData(ptiData), paste( infection, paste0(hpi, "h"), batch, sep=":"))
 
 hc <- hclust(distsRL
              ,method = "average"
 )  # performs hierarchical clustering
-par(mar=c(7,4,4,2)+0.1)
+par(mar=c(7,4,4,5)+0.1)
 hmcol <- colorRampPalette(brewer.pal(9, "GnBu"))(100)# picking our colours
 
-tiff(filename = "heatmap.tiff", height = 1080, width = 1280) #opens a tiff device
+tiff(filename = "heatmap.tiff", height = 1080, width = 1400) #opens a tiff device
 heatmap.2(mat, Rowv=as.dendrogram(hc),
           symm=T, trace="none",
           cexRow = 2,
           cexCol = 2,
-          col = rev(hmcol), margin=c(13,9)) #prints to tiff
+          col = rev(hmcol), margin=c(13,13)) #prints to tiff
 dev.off()
 
 
@@ -105,7 +105,9 @@ p =p+geom_point(aes(size=1)) +guides(colour = guide_legend(override.aes = list(s
                                                                                                  legend.text = element_text(size=15)
 )
 
-
+p
+ggsave("myplot.pdf",plot = p) #output the PCA plot
+pdf("silly.pdf")
 
 
 ##DGE analysis
@@ -116,11 +118,130 @@ objectSymbol[sigGenes_pti$row]
 
 sigGenes_m = sigGenes_m$row[sigGenes_m$log2FoldChange > 1]
 
+
+#__________________________Mine2018 dataset________________
+files <- file.path("mine2018/counts", list.files("mine2018/counts"))
+samples <- c("dc3000_h12_1", "dc3000_h12_2", "dc3000_h12_3", "dc3000_h24_1", "dc3000_h24_2", "dc3000_h24_3", "mock_h12_1", "mock_h12_2", "mock_h12_3", "mock_h24_1", "mock_h24_2", "mock_h24_3", "rpm1_h12_1", "rpm1_h12_2", "rpm1_h12_3", "rpm1_h24_1", "rpm1_h24_2", "rpm1_h24_3", "rpt2_h12_1", "rpt2_h12_2", "rpt2_h12_3", "rpt2_h24_1", "rpt2_h24_2", "rpt2_h24_3")
+names(files) <- samples
+
+
+##Sample information to build a model
+infection = factor(c(rep("dc3000", 6), rep("mock", 6), rep("rpm1", 6), rep("rpt2", 6)), levels = c("mock", "dc3000", "rpt2", "rpm1")) #Treatment type, mg = mock solution, pst = P syringae pv tomato
+hpi = factor(rep(c(rep(12, 3), rep(24, 3)), 4), levels = c(12, 24)) #Hours post infiltration
+
+
+design_full <- data.frame(sample=names(files),
+                          file=files,
+                          infection =infection,
+                          hpi=hpi
+)
+design_full
+
+##Very general model that just has all the sample information
+model_full <- formula(~infection+hpi)
+rawData <- DESeqDataSetFromHTSeqCount(design_full, design=model_full)
+
+
+## Grouping all the experimental variables into distinct treatment groups
+rawData$group <- factor(paste(rawData$infection, rawData$hpi, sep = "_"))
+rawData$group = factor(rawData$group,levels=c("mock_12", "mock_24", "dc3000_12", "dc3000_24", "rpm1_12", "rpm1_24", "rpt2_12", "rpt2_24"))
+
+# Filter lowly expressed genes
+keep <- rowMeans(counts(rawData)) >= 10 #Genes which on average have less than 10 reads
+#keep = rowMeans(counts(rawData)[, 1:18]) >=10 &rowMeans(counts(rawData)[, 19:36]) >=10
+rawData <- rawData[keep,]
+
+# Build DESeq object based on distinct treatment groups
+rawData@design = ~group
+etiData <- DESeq(rawData)
+
+#Analyze the quality of the pti data set
+hmcol = hcl_palettes(palette = "Berlin") #Setting the colour palatte
+for_pca <- rlog(etiData, blind=F)
+rlogMat <- assay(for_pca) # just making a matrix of the counts that have been corrected for over-dispersion in a "blind" fashion
+
+distsRL <- dist(t(rlogMat)) # Computes a distance matrix (Euclidian Distance)
+mat <- as.matrix(distsRL)  # Make sure it is a matrix
+
+
+infection = c(rep("hrcC-",3),rep("Mock",3))
+infection <- as.factor(infection)
+length(infection)
+batch = factor(c(1,2,3,1,2,3), levels = c(1,2,3))
+
+rownames(mat) <- colnames(mat) <-   with(colData(etiData), paste( infection, paste0(hpi, "h"), sep=":"))
+
+hc <- hclust(distsRL
+             ,method = "average"
+)  # performs hierarchical clustering
+par(mar=c(7,4,4,5)+0.1)
+hmcol <- colorRampPalette(brewer.pal(9, "GnBu"))(100)# picking our colours
+
+tiff(filename = "heatmap.tiff", height = 1080, width = 1400) #opens a tiff device
+heatmap.2(mat, Rowv=as.dendrogram(hc),
+          symm=T, trace="none",
+          cexRow = 2,
+          cexCol = 2,
+          col = rev(hmcol), margin=c(13,13)) #prints to tiff
+dev.off()
+
+
+p =plotPCA(for_pca, ntop = 10000,
+           intgroup=c("infection","hpi"))
+
+p =p+geom_point(aes(size=1)) +guides(colour = guide_legend(override.aes = list(size = 8)))+theme(panel.grid.major = element_blank(), 
+                                                                                                 panel.grid.minor = element_blank(),
+                                                                                                 panel.background = element_blank(), 
+                                                                                                 axis.line = element_line(colour = "black", size=1),
+                                                                                                 axis.title.x=element_text(size=15),
+                                                                                                 #axis.text.x=element_blank()),
+                                                                                                 axis.ticks=element_line(colour = "black", size =1),
+                                                                                                 axis.ticks.length = unit(5,"points") ,
+                                                                                                 axis.title.y = element_text(size=15),
+                                                                                                 legend.position = "right",
+                                                                                                 axis.text = element_text(size=15),
+                                                                                                 legend.text = element_text(size=15)
+)
+
+p
+ggsave("myplot.pdf",plot = p) #output the PCA plot
+pdf("silly.pdf")
+
+
+##DGE analysis
+sigGenes_dc3000 = results(etiData, contrast = c("group", "dc3000_24", "mock_24"),  alpha = 0.05, tidy = T)
+sigGenes_dc3000 = sigGenes_dc3000[ is.na(sigGenes_dc3000$padj) == F,]
+sigGenes_dc3000 = sigGenes_dc3000[abs(sigGenes_dc3000$log2FoldChange) > 1  & sigGenes_dc3000$padj < 0.05,]
+
+sigGenes_y = results(allData, contrast = c("group", "ypst24", "ymg24"), alpha = 0.05, tidy = T)
+sigGenes_y = sigGenes_y[ is.na(sigGenes_y$padj) == F,]
+sigGenes_y = sigGenes_y[abs(sigGenes_y$log2FoldChange) > 1  & sigGenes_y$padj < 0.05,]
+
+sigGenes_m = results(allData, contrast = c("group", "mpst24", "mmg24"), alpha = 0.05, tidy = T)
+sigGenes_m = sigGenes_m[ is.na(sigGenes_m$padj) == F,]
+sigGenes_m = sigGenes_m[abs(sigGenes_m$log2FoldChange) > 1  & sigGenes_m$padj < 0.05,]
+
+sigGenes_y$row %in% sigGenes_dc3000$row
+
+sigGenes_m = sigGenes_m$row[sigGenes_m$log2FoldChange > 1]
+
+
+
+
+compareGenes = function(){
+        
+        
+}
+
+
+
+
+
 for (i in myList) {
         i = i$row[i < 0.05 & i$log2FoldChange > 1]
 }
 
-view.gene.allDef = function(accession, fileName = objectSymbol[toupper(accession)], hour = "24", graph = F){
+foldDiffHeat= function(accession, fileName = objectSymbol[toupper(accession)], hour = "24", graph = F){
         geneCount <- plotCounts(allData, gene = toupper(accession), 
                                 intgroup = c("age", "infection","hpi"), returnData = TRUE)
         geneCount = geneCount[geneCount$hpi == hour, ]

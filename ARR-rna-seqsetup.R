@@ -292,7 +292,7 @@ log2linear = function(lfc){
 get.path = function(){
      return(paste(scan("clipboard", what = "string", sep = "\\"), collapse = "/"))
 }
-
+#s
 ## Finds uniquely up-(or down) regulated genes
 find.unique = function(hpi, reverse = F, down = F ){
      comp = compare.group(hpi = hpi)

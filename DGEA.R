@@ -20,77 +20,32 @@ library(stringi)
 set.seed(31138)
 
 #laptop directory
-setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-R workshop")
-
-#Desktop directory
-setwd("C:\\Users\\garrett\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-R workshop")
-
-
-gene_associations <- read.delim("gene_association_final.txt", comment.char = "!", header = FALSE, as.is = TRUE) 
-colnames(gene_associations) <- c("DB", "DB_Object_ID", "DB_Object_Symbol", "Qualifier", "GO_ID",
-                                 "DB:Reference", "Evidence", "With_From", "Aspect", "DB_Object_Name",
-                                 "DB_Object_Synonym", "DB_Object_Type", "Taxon", "Date", "Assigned_by")
-
-# # Uncomment if this is the first time running this code this helps produce a gene_association file to work with in the future
-# #I didn't want to look at locus ID's from TAIR so I took the first item of DB_Object_Synonym which is the gene ID and put it in the DB_Object_ID column as that is more useful
-# gene_associations$DB_Object_ID = res
-# gen_association_save <- sapply(gene_associations, function(x){paste(x, collapse = ", ")}) 
-# gen_association_save <- data.frame("Gene Association" = gene_associations)
-# write.table(gen_association_save, file = "gene_association_final.txt", sep = "\t", quote = FALSE, col.names = FALSE, row.names = F)
-
-# Trimming the dataframe so that it's only what we're interested in
-gene_associations <- gene_associations[,c(2,3,5,7,9,14)]
-
-
-##Make Gene-Go object from scratch
-# # Go through every unique gene and pull out any GO_ID associated with the given gene then give
-# gene_GO <- lapply(unique(gene_associations$DB_Object_ID), function(x){tmp <- gene_associations %>% filter(DB_Object_ID == x)
-# return(tmp$GO_ID)})
-# names(gene_GO) <- unique(gene_associations$DB_Object_ID) 
-# #Save it
-# gene_GO_save <- sapply(gene_GO, function(x){paste(x, collapse = ", ")}) 
-# gene_GO_save <- as.data.frame( gene_GO_save) # Making a dataframe
-# write.table(gene_GO_save, file = "TAIR_to_GO.delim", sep = "\t", quote = FALSE, col.names = FALSE) 
-
-
-#Load a pre-made Gene-to-go from file
-gene_GO <- readMappings("TAIR_to_GO.delim")
-
-#Collect filenames and label samples
-files <- file.path("counts", list.files("counts"))
-samples <- c("m_mg_0h_s1", "m_mg_0h_s2","m_mg_0h_s3","m_mg_12h_s1","m_mg_12h_s2","m_mg_12h_s3","m_mg_24h_s1","m_mg_24h_s2","m_mg_24h_s3","m_pst_0h_s1","m_pst_0h_s2","m_pst_0h_s3","m_pst_12h_s1","m_pst_12h_s2","m_pst_12h_s3","m_pst_24h_s1","m_pst_24h_s2","m_pst_24h_s3","y_mg_0h_s1","y_mg_0h_s2","y_mg_0h_s3","y_mg_12h_s1","y_mg_12h_s2","y_mg_12h_s3","y_mg_24h_s1","y_mg_24h_s2","y_mg_24h_s3","y_pst_0h_s1","y_pst_0h_s2","y_pst_0h_s3","y_pst_12h_s1","y_pst_12h_s2","y_pst_12h_s3","y_pst_24h_s1","y_pst_24h_s2","y_pst_24h_s3")
+# load PTI dataset
+files <- file.path("jarad2020/counts", list.files("jarad2020/counts"))
+samples <- c("hrc_h24_s1", "hrc_h24_s2", "hrc_h24_s3", "mock_h24_s1", "mock_h24_s2", "mock_h24_s3")
 names(files) <- samples
 
-#Subset dataset by time
-# sub_0 = c(1:3,10:12,19:21,28:30)
-# sub_12 = c(4:6,13:15,22:24,31:33)
-# sub_24 = c(7:9,16:18,25:27,34:36)
 
-#ymg ypst mmg mpst
-sub_0 = c(19:21,28:30, 1:3,10:12) 
-sub_12 = c(22:24,31:33,4:6,13:15)
-sub_24 = c(25:27,34:36, 7:9,16:18)
 ##Sample information to build a model
-infection = factor(c(rep("mg", 9), rep("pst", 9), rep("mg", 9), rep("pst", 9)), levels = c("mg", "pst")) #Treatment type, mg = mock solution, pst = P syringae pv tomato
-hpi = factor(rep(c(rep(0, 3), rep(12, 3), rep(24, 3)), 4), levels = c(0, 12, 24)) #Hours post infiltration
-age = factor(c(rep("m",18),rep("y",18)), levels = c("y", "m")) #Plant age y = 3.5 wpg, m = 6.5 wpg
+infection = factor(c(rep("hrc", 3), rep("mock", 3)), levels = c("mock", "hrc")) #Treatment type, mg = mock solution, pst = P syringae pv tomato
+hpi = factor(rep(24, 6), levels = c(24)) #Hours post infiltration
+
 
 design_full <- data.frame(sample=names(files),
                           file=files,
-                          age=age,
                           infection =infection,
                           hpi=hpi
-                )
+)
 design_full
 
 ##Very general model that just has all the sample information
-model_full <- formula(~age+infection+hpi)
+model_full <- formula(~infection)
 rawData <- DESeqDataSetFromHTSeqCount(design_full,design=model_full)
 
 
 ## Grouping all the experimental variables into distinct treatment groups
-rawData$group <- factor(paste0(rawData$age,rawData$infection,rawData$hpi))
-rawData$group = factor(rawData$group,levels=c("ymg0","ymg12","ymg24","ypst0","ypst12","ypst24","mmg0","mmg12","mmg24","mpst0","mpst12","mpst24"))
+rawData$group <- factor(paste0(rawData$infection,rawData$hpi))
+rawData$group = factor(rawData$group,levels=c("mock24","hrc24"))
 
 # Filter lowly expressed genes
 keep <- rowMeans(counts(rawData)) >= 10 #Genes which on average have less than 10 reads
@@ -99,10 +54,14 @@ rawData <- rawData[keep,]
 
 # Build DESeq object based on distinct treatment groups
 rawData@design = ~group
-allData <- DESeq(rawData)
+ptiData <- DESeq(rawData)
+sigGenes_pti= results(ptiData, contrast = c("group", "hrc24", "mock24"), tidy = T)
+sigGenes_pti = sigGenes_pti[ is.na(sigGenes_pti$padj) == F,]
+sigGenes_pti = sigGenes_pti[sigGenes_pti$log2FoldChange > 0.58  & sigGenes_pti$padj < 0.05,]
+objectSymbol[sigGenes_pti$row]
 
-expression = compare.group(hpi = c("12", "24"))
-expression = expression[c(1,2,5,6)]
+sigGenes_m = results(allData,contrast = c("group","mpst12","mmg12"),alpha =0.05, pAdjustMethod = "BH", tidy = T)
+sigGenes_m = sigGenes_m$row[sigGenes_m$log2FoldChange > 1]
 
 for (i in myList) {
         i = i$row[i < 0.05 & i$log2FoldChange > 1]

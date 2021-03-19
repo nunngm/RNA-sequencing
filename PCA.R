@@ -61,7 +61,7 @@ d <- data.frame(PC1 = pca$x[, pc_x], PC2 = pca$x[, pc_y],
                 hpi = colData(for_pca)[,3]#,
                 #ageinf = as.integer(as.factor(paste0(d$age,d$)))
      ) #In pca$x[,]
-temp = as.integer(as.factor(paste0(d$inf,d$age)))
+temp = as.integer(as.factor(paste0(d$inf,d$hpi)))
 temp = lapply(temp, function(x){tmp = if (x>2){
     x=15+(x-3)
 } else{
@@ -98,6 +98,7 @@ transparency = c(rep(1,3), rep(1,3),rep(1,3),
                  rep(1,3), rep(1,3),rep(1,3), 
                  rep(1,3), rep(1,3),rep(1,3), 
                  rep(1,3), rep(1,3),rep(1,3))
+transparency = transparency[1:24]
 
 tiff(filename = "PCA_microarray.tiff", height = 2000, width = 2000) #opens a tiff device
 ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = "hpi")) + geom_point(size = 20,shape =temp, stroke = 6, alpha = transparency) +  xlab("") + ylab("") + coord_fixed() +theme(panel.grid.major = element_blank(), 

@@ -87,7 +87,7 @@ heatmap.2(mat, Rowv=as.dendrogram(hc),
           col = rev(hmcol), margin=c(13,13)) #prints to tiff
 dev.off()
 
-
+## Plot the results (quickly but kinda nicely)
 p =plotPCA(for_pca, ntop = 10000,
            intgroup=c("infection","hpi", "batch"))
 
@@ -157,17 +157,15 @@ etiData <- DESeq(rawData)
 
 #Analyze the quality of the pti data set
 hmcol = hcl_palettes(palette = "Berlin") #Setting the colour palatte
-for_pca <- rlog(etiData, blind=F)
+for_pca <- rlog(etiData, blind=T)
 rlogMat <- assay(for_pca) # just making a matrix of the counts that have been corrected for over-dispersion in a "blind" fashion
 
 distsRL <- dist(t(rlogMat)) # Computes a distance matrix (Euclidian Distance)
 mat <- as.matrix(distsRL)  # Make sure it is a matrix
 
-
-infection = c(rep("hrcC-",3),rep("Mock",3))
-infection <- as.factor(infection)
-length(infection)
-batch = factor(c(1,2,3,1,2,3), levels = c(1,2,3))
+#Sample number labelling
+batch = factor(rep(c(1,2,3), 8), levels = c(1,2,3))
+rawData$batch = batch
 
 rownames(mat) <- colnames(mat) <-   with(colData(etiData), paste( infection, paste0(hpi, "h"), sep=":"))
 
@@ -185,30 +183,80 @@ heatmap.2(mat, Rowv=as.dendrogram(hc),
           col = rev(hmcol), margin=c(13,13)) #prints to tiff
 dev.off()
 
+#----------------------------- Really good looking PCA for ETI data
 
-p =plotPCA(for_pca, ntop = 10000,
-           intgroup=c("infection","hpi"))
+for_pca <- rlog( etiData, blind = T )
+rv <- rowVars(assay(for_pca))
+# select the ntop genes by variance (across treatment groups)
+ntop = 10000
+select <- order(rv, decreasing=TRUE)[seq_len(min(ntop, length(rv)))]
 
-p =p+geom_point(aes(size=1)) +guides(colour = guide_legend(override.aes = list(size = 8)))+theme(panel.grid.major = element_blank(), 
-                                                                                                 panel.grid.minor = element_blank(),
-                                                                                                 panel.background = element_blank(), 
-                                                                                                 axis.line = element_line(colour = "black", size=1),
-                                                                                                 axis.title.x=element_text(size=15),
-                                                                                                 #axis.text.x=element_blank()),
-                                                                                                 axis.ticks=element_line(colour = "black", size =1),
-                                                                                                 axis.ticks.length = unit(5,"points") ,
-                                                                                                 axis.title.y = element_text(size=15),
-                                                                                                 legend.position = "right",
-                                                                                                 axis.text = element_text(size=15),
-                                                                                                 legend.text = element_text(size=15)
+# perform a PCA on the data in assay(x) for the selected genes
+pca <- prcomp(t(assay(for_pca)[select,]))
+percentVar <- pca$sdev^2/sum(pca$sdev^2)
+intgroup_df <- as.data.frame(colData(etiData)[, "group", drop = FALSE])
+
+
+#Selecting the principle components
+pc_x = 1
+pc_y = 2
+d <- data.frame(PC1 = pca$x[, pc_x], PC2 = pca$x[, pc_y], 
+                group = intgroup_df, 
+                inf = colData(for_pca)[,1],
+                hpi = colData(for_pca)[,2],
+                batch = colData(for_pca)[,4]#,
+                #ageinf = as.integer(as.factor(paste0(d$age,d$)))
+) #In pca$x[,]
+
+#Setting the shapes for the various infection types
+temp = c(rep(15,6), rep(3, 6), rep(16,6), rep(17,6))
+
+#Drawing the PCA plot and demonstrating variance
+
+#prints to tiff
+
+ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = "hpi")) + geom_point(size = 4, shape =temp, stroke = 1.5) +  xlab(paste0("PC ",pc_x," (", round(percentVar[pc_x] * 100), "% variance)")) + ylab(paste0("PC ",pc_y," (", round(percentVar[pc_y] * 100), "% variance)")) + 
+        coord_fixed() +theme(panel.grid.major = element_blank(), 
+                             panel.grid.minor = element_blank(),
+                             panel.background = element_blank(), 
+                             axis.line = element_line(colour = "black", size=1),
+                             axis.title.x=element_text(size=15),
+                             #axis.text.x=element_blank()),
+                             axis.ticks=element_line(colour = "black", size =1),
+                             axis.ticks.length = unit(5,"points") ,
+                             axis.title.y = element_text(size=15),
+                             legend.position = "right",
+                             axis.text = element_text(size=15),
+        )
+
+
+
+as.factor(paste0(d$inf, d$hpi))
+transparency = c(rep(1,3), rep(1,3),rep(1,3), 
+                 rep(1,3), rep(1,3),rep(1,3), 
+                 rep(1,3), rep(1,3),rep(1,3), 
+                 rep(1,3), rep(1,3),rep(1,3))
+transparency = transparency[1:24]
+
+tiff(filename = "PCA.tiff", height = 2000, width = 2000) #opens a tiff device
+ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = "hpi")) + geom_point(size = 20,shape =temp, stroke = 6, alpha = transparency) +  xlab("") + ylab("") + coord_fixed() +theme(panel.grid.major = element_blank(), 
+                                                                                                                                                                                      panel.grid.minor = element_blank(),
+                                                                                                                                                                                      panel.background = element_blank(), 
+                                                                                                                                                                                      axis.line = element_line(colour = "black", size=4),
+                                                                                                                                                                                      axis.title.x=element_text(size=15),
+                                                                                                                                                                                      #axis.text.x=element_blank()),
+                                                                                                                                                                                      axis.ticks=element_line(colour = "black", size =4),
+                                                                                                                                                                                      axis.ticks.length = unit(20,"points") ,
+                                                                                                                                                                                      axis.title.y = element_text(size=15),
+                                                                                                                                                                                      legend.position = "right",
+                                                                                                                                                                                      axis.text = element_text(size= 75),
 )
+dev.off()
 
-p
-ggsave("myplot.pdf",plot = p) #output the PCA plot
-pdf("silly.pdf")
+ggsave("makegraph_noPoints.png")
+pdf("myplots.pdf")
 
-
-##DGE analysis
+##Comparing ETI data to ARR data
 sigGenes_dc3000 = results(etiData, contrast = c("group", "dc3000_24", "mock_24"),  alpha = 0.05, tidy = T)
 sigGenes_dc3000 = sigGenes_dc3000[ is.na(sigGenes_dc3000$padj) == F,]
 sigGenes_dc3000 = sigGenes_dc3000[abs(sigGenes_dc3000$log2FoldChange) > 1  & sigGenes_dc3000$padj < 0.05,]

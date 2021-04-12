@@ -310,3 +310,60 @@ GOI = rownames(sigGenes_m)[! rownames(sigGenes_m) %in% sigGenes_eti$row]
 
 GOI = GOI[! GOI %in% sigGenes_pti$row]
 GOI = GOI[! GOI %in% sigGenes_y$row]
+
+
+#------ Mock vs Mock
+rawData$group <- factor(paste0(rawData$age,rawData$infection))
+rawData$group = factor(rawData$group,levels=c("ymg", "ypst", "mmg", "mpst"))
+
+keep <- rowMeans(counts(rawData)) >= 10 #Genes which on average have less than 10 reads
+#keep = rowMeans(counts(rawData)[, 1:18]) >=10 &rowMeans(counts(rawData)[, 19:36]) >=10
+rawData <- rawData[keep,]
+
+# Build DESeq object based on distinct treatment groups
+rawData@design = ~group
+arrData <- DESeq(rawData)
+
+ageGenes = list(results(allData, contrast = c("group", "mmg0", "ymg0"), alpha = 0.05, tidy = T), results(allData, contrast = c("group", "mmg12", "ymg12"), alpha = 0.05, tidy = T), results(allData, contrast = c("group", "mmg24", "ymg24"), alpha = 0.05, tidy = T))
+
+ageGenes = results(arrData, contrast = c("group", "mmg", "ymg"), alpha = 0.05, tidy = T)
+ageGenes = ageGenes[ ageGenes$log2FoldChange > 1 & ageGenes$padj < 0.05 , ]
+
+allComp = compare.group()
+thresh = 0.05
+lfc = 1
+
+mpstcomp = list(results(allData,contrast = c("group", "mpst0", "ymg0"), alpha = 0.05, pAdjustMethod="BH", tidy = T), results(allData,contrast = c("group", "mpst12", "ymg12"), alpha = 0.05, pAdjustMethod="BH", tidy = T), results(allData,contrast = c("group", "mpst24", "ymg24"), alpha = 0.05, pAdjustMethod="BH", tidy = T))
+
+#RLP protein fanily
+
+mydata= read.table(file= "clipboard",sep= "\t",header =F)
+mydata[, 2] = toupper(mydata[,2])
+genes_of_interest = mydata[,2]
+GOI = rownames(allComp$ypst0ymg0) %in% genes_of_interest
+
+finalLFC = cbind(allComp$ypst0ymg0[GOI, 2], allComp$mmg0ymg0[GOI,2], mpstcomp[[1]][GOI, 3], allComp$ypst12ymg12[GOI, 2], allComp$mmg12ymg12[GOI, 2], mpstcomp[[2]][GOI, 3], allComp$ypst24ymg24[GOI, 2], allComp$mmg24ymg24[GOI, 2], mpstcomp[[3]][GOI, 3])
+
+rownames(finalLFC) = objectSymbol[rownames(allComp$ypst0ymg0)[rownames(allComp$ypst0ymg0) %in% genes_of_interest]]
+colnames(finalLFC) = c("Y.Pst", "M.Mock", "M.Pst","Y.Pst", "M.Mock", "M.Pst", "Y.Pst", "M.Mock", "M.Pst" )
+
+
+#worked
+hmcol1 = sequential_hcl(n = 10, h = 360, c =180, l = c(20,130), power = 0.4, rev = T)
+show_col(hmcol1)
+hmcol2 = sequential_hcl(n = 10, h = 230, c = 100, l = c(50,100), power = 0.6)
+show_col(hmcol2)
+hmcol = c(hmcol2[1:9], "#FFFFFF", hmcol1[2:10]) 
+show_col(hmcol)
+
+
+tiff("rplot2.tiff", width = 4000, height = 2000)
+aheatmap(finalLFC, color = hmcol, Rowv = T, Colv = NA, distfun= "euclidean",treeheight = 200,hclustfun = "average", scale = "none", cellwidth = 320, breaks =0)
+dev.off()
+
+pdf()
+heatmap.2(finalLFC, Rowv=T, Colv = F,
+          trace="none", col = hmcol,
+          dendrogram = "row", cexRow = 0.5)
+dev.off()
+

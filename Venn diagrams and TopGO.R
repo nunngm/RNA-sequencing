@@ -64,13 +64,15 @@ geneList = as.factor(geneList) #This has to be a factor for TopGO
 #Instead of just comparing to an environment of DEGs this allow comparison to all genes (which have an average expression >10 reads).
 totalGenes = unique(rownames(res_y))
 geneList2 = as.integer(totalGenes %in% names(geneList[geneList==1]))
+
+geneList2 = as.integer(totalGenes %in% ageGenes[,1])
 names(geneList2) = totalGenes
 sum(geneList2)
 geneList2 = as.factor(geneList2)
 
 #Does the GO enrichment (BP, MF, or CC)
 GOdata <- new("topGOdata",
-              ontology = "BP", 
+              ontology = "MF", 
               allGenes = geneList2,  
               annotationFun = annFUN.gene2GO, 
               gene2GO = gene_GO) 
@@ -80,19 +82,19 @@ fisher_GO <- getSigGroups(GOdata, fisher_test)
 fisher_GO
 
 #Lets see the most significant ones
-table_GO <- GenTable(GOdata, Fisher = fisher_GO, topNodes = 80)
+table_GO <- GenTable(GOdata, Fisher = fisher_GO, topNodes = 40)
 table_GO #A table of significant terms
 
 #A tree of the significant terms
 par(cex = 0.2)
-showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 30, useInfo = 'all')
+showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 20, useInfo = 'all')
 
 #GO term -> significant genes in goi list
 allGO = genesInTerm(GOdata)
 sigGenes = lapply(allGO,function(x) x[x %in% names(geneList2[geneList2==1])] )
-objectSymbol[sigGenes[["GO:0007165"]]]
+objectSymbol[sigGenes[["GO:0030246"]]]
 
-tmp = data[rownames(data) %in% sigGenes[["GO:0007165"]], ]
+tmp = data[rownames(data) %in% sigGenes[["GO:0010168"]], ]
 
 for (i in 1:length(tmp)){
      df = tmp[[i]]

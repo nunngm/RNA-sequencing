@@ -329,6 +329,7 @@ ageGenes = list(results(allData, contrast = c("group", "mmg0", "ymg0"), alpha = 
 ageGenes = results(arrData, contrast = c("group", "mmg", "ymg"), alpha = 0.05, tidy = T)
 ageGenes = ageGenes[ ageGenes$log2FoldChange > 1 & ageGenes$padj < 0.05 , ]
 
+
 allComp = compare.group()
 thresh = 0.05
 lfc = 1

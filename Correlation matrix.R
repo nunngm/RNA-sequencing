@@ -157,6 +157,7 @@ py <- ggdend(dy$segments) + coord_flip()
 
 
 clust.of.interest <- c("green", "purple", "maroon", "magenta", "greenyellow", "grey60", "yellowgreen", "darkred")
+clust.of
 par(cex=0.5)
 (heatmap <- ggplot(data = correlation_ggplot %>% filter(., Var1 %in% clust.of.interest), 
                    aes(x = Var2, y = Var1)) +
@@ -180,7 +181,7 @@ heatmap_full <- ggplot(data = correlation_ggplot,
                          high = "#FF6F59", na.value = "white", name = "Correlation", 
                          limits=c(-1, 1), breaks=seq(-1,1,by=0.5)) + 
     labs(x="Ecotype and Condition", y="Clusters") +  theme_bw() + #theme(axis.text.y=element_blank(), plot.margin = margin(-0.75, 0, 0,0 , "cm")))
-    theme(axis.text.y=element_text(angle=20,vjust=0.5), plot.margin = margin(-0.75, 0, 0,0 , "cm"))
+    theme(axis.text.y=element_text(angle=20,vjust=0.5), axis.text.x = element_text(angle = -30, vjust = 0.5, hjust = 0, size = 9) , plot.margin = margin(-0.75, 0, 0,0 , "cm"))
 dendro_heatmap_full <- px + heatmap_full + plot_layout(ncol = 1, heights = c(1, 5))
 dendro_heatmap_full = heatmap_full + plot_layout(ncol = 1, heights =  5)
 dendro_heatmap_full
@@ -193,7 +194,7 @@ geneClusters <- network$colors
 genenames <- rownames(allgenes)
 names(clustcolours) <- genenames
 
-genesOI = names(clustcolours[clustcolours == "green"])
+genesOI = names(clustcolours[clustcolours == "darkorange"])
 
 
 

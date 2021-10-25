@@ -193,3 +193,11 @@ objectSymbol[sigGenes[["GO:0140096"]]]
 
 
 #___________________________ Print genes _____________
+
+help = compare.group(hpi = "12")
+genesOI = help[[1]]
+genesOI[,1] = help[[1]]$padj > 0.05
+genesOI[,2] = help[[2]]$padj < 0.05
+genesOI[,3] = help[[4]]$padj < 0.05
+genesOI[,4] = -2*(log(1-help[[4]]$padj)+log(help[[2]]$padj)+log(1-help[[1]]$padj))
+genesOI[,4] = pchisq(genesOI[,4], 2*3)

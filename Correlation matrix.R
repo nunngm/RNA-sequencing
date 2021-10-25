@@ -195,9 +195,12 @@ names(clustcolours) <- genenames
 
 genesOI = names(clustcolours[clustcolours == "green"])
 
-
-
-
+volGenes = find.volcano(hour = "12")
+sum(genesOI %in% rownames(volGenes[volGenes$de == "UP", ]))
+selectGenes = genesOI[genesOI %in% rownames(volGenes[volGenes$de == "UP", ])]
+selectGenes = objectSymbol[selectGenes]
+selectGenes[selectGenes == "AT2G13810"]
+# 308/848 
 
 
 ## What about ALL DEGS?? 

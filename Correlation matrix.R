@@ -156,7 +156,7 @@ px <- ggdend(dx$segments)
 py <- ggdend(dy$segments) + coord_flip()
 
 
-clust.of.interest <- c("green", "purple", "maroon", "magenta", "greenyellow", "grey60", "yellowgreen", "darkred")
+clust.of.interest <- c("green", "greenyellow", "skyblue3", "saddlebrown", "grey60", "darkolivegreen", "navajowhite2", "salmon4", "magenta", "yellow")
 clust.of
 par(cex=0.5)
 (heatmap <- ggplot(data = correlation_ggplot %>% filter(., Var1 %in% clust.of.interest), 
@@ -194,7 +194,8 @@ geneClusters <- network$colors
 genenames <- rownames(allgenes)
 names(clustcolours) <- genenames
 
-genesOI = names(clustcolours[clustcolours == "darkorange"])
+genesOI = names(clustcolours[clustcolours == "saddlebrown"])
+objectSymbol[genesOI]
 
 volGenes = find.volcano(hour = "12")
 sum(genesOI %in% rownames(volGenes[volGenes$de == "UP", ]))

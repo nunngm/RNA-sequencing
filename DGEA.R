@@ -257,15 +257,15 @@ ggsave("makegraph_noPoints.png")
 pdf("myplots.pdf")
 
 ##Comparing ETI data to ARR data
-sigGenes_dc3000 = results(etiData, contrast = c("group", "dc3000_24", "mock_24"),  alpha = 0.05, tidy = T)
+sigGenes_dc3000 = results(etiData, contrast = c("group", "dc3000_12", "mock_12"),  alpha = 0.05, tidy = T)
 sigGenes_dc3000 = sigGenes_dc3000[ is.na(sigGenes_dc3000$padj) == F,]
-sigGenes_dc3000 = sigGenes_dc3000[abs(sigGenes_dc3000$log2FoldChange) > 1  & sigGenes_dc3000$padj < 0.05,]
+sigGenes_dc3000 = sigGenes_dc3000[abs(sigGenes_dc3000$log2FoldChange) > log2(1.5)  & sigGenes_dc3000$padj < 0.05,]
 
 sigGenes_y = results(allData, contrast = c("group", "ypst12", "ymg12"), alpha = 0.05, tidy = T)
 sigGenes_y = sigGenes_y[ is.na(sigGenes_y$padj) == F,]
 sigGenes_y = sigGenes_y[sigGenes_y$log2FoldChange > 1  & sigGenes_y$padj < 0.05,]
 
-sigGenes_m = results(allData, contrast = c("group", "mpst12", "ymg12"), alpha = 0.05, tidy = T)
+sigGenes_m = results(allData, contrast = c("group", "mpst12", "mmg12"), alpha = 0.05, tidy = T)
 sigGenes_m = sigGenes_m[ is.na(sigGenes_m$padj) == F,]
 sigGenes_m = sigGenes_m[sigGenes_m$log2FoldChange > 1  & sigGenes_m$padj < 0.05,]
 
@@ -290,25 +290,25 @@ sigGenes_y = sigGenes_y[sigGenes_y$de == "UP",]
 colors = qualitative_hcl(4, palette = "dark",c = 90)
 show_col(colors[1:4] )
 
-venn.diagram(x = list(sigGenes_y$row, sigGenes_m$row, sigGenes_eti$row, sigGenes_pti$row),
-             category.names = c("Young", "Mature", "ETI", "PTI"),
-             filename = "12hpt-vol.tiff",
+venn.diagram(x = list(sigGenes_m$row, sigGenes_eti$row, sigGenes_pti$row),
+             category.names = c("Mature", "ETI", "PTI"),
+             filename = "12h Mature-ETI-PTI.tiff",
              output = T,
              imagetype = "tiff",
              euler.d = F,
              scaled = F,
-             col =  colors[1:4],
+             col =  colors[1:3],
              fill = "white",
              cat.col = "black",
              cat.cex = 2,
-             cat.dist = c(0.12, 0.12,0.04,0.12),
+             cat.dist = c(0.12, 0.12,0.12),
              margin =0.15)
 
-GOI = sigGenes_m$row[! sigGenes_m$row %in% sigGenes_eti$row]
+GOI = sigGenes_m$row[ sigGenes_m$row %in% sigGenes_eti$row]
 
 GOI = rownames(sigGenes_m)[! rownames(sigGenes_m) %in% sigGenes_eti$row]
 
-GOI = GOI[! GOI %in% sigGenes_pti$row]
+GOI = GOI[ GOI %in% sigGenes_pti$row]
 GOI = GOI[! GOI %in% sigGenes_y$row]
 
 

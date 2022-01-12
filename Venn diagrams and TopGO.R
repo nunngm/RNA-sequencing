@@ -65,7 +65,7 @@ geneList = as.factor(geneList) #This has to be a factor for TopGO
 totalGenes = unique(rownames(res_y))
 geneList2 = as.integer(totalGenes %in% names(geneList[geneList==1]))
 
-geneList2 = as.integer(totalGenes %in% ageGenes[,1])
+geneList2 = as.integer(totalGenes %in% genesOI)
 names(geneList2) = totalGenes
 sum(geneList2)
 geneList2 = as.factor(geneList2)
@@ -82,7 +82,7 @@ fisher_GO <- getSigGroups(GOdata, fisher_test)
 fisher_GO
 
 #Lets see the most significant ones
-table_GO <- GenTable(GOdata, Fisher = fisher_GO, topNodes = 40)
+table_GO <- GenTable(GOdata, Fisher = fisher_GO, topNodes = 100)
 table_GO #A table of significant terms
 
 #A tree of the significant terms
@@ -92,7 +92,7 @@ showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 20, useInfo = 'all')
 #GO term -> significant genes in goi list
 allGO = genesInTerm(GOdata)
 sigGenes = lapply(allGO,function(x) x[x %in% names(geneList2[geneList2==1])] )
-objectSymbol[sigGenes[["GO:0030246"]]]
+objectSymbol[sigGenes[["GO:0005215"]]]
 
 tmp = data[rownames(data) %in% sigGenes[["GO:0010168"]], ]
 
@@ -275,6 +275,7 @@ geneList2 = as.factor(geneList)
 
 #Instead of just comparing to an environment of DEGs this allow comparison to all genes (which have an average expression >10 reads).
 totalGenes = unique(rownames(tmp[[2]]))
+
 geneList2 = as.integer(totalGenes %in% names(geneList[geneList==1]))
 names(geneList2) = totalGenes
 sum(geneList2)
@@ -282,7 +283,7 @@ geneList2 = as.factor(geneList2)
 
 #Does the GO enrichment (BP, MF, or CC)
 GOdata <- new("topGOdata",
-              ontology = "BP", 
+              ontology = "CC", 
               allGenes = geneList2,  
               annotationFun = annFUN.gene2GO, 
               gene2GO = gene_GO) 
@@ -292,12 +293,23 @@ fisher_GO <- getSigGroups(GOdata, fisher_test)
 fisher_GO
 
 #Lets see the most significant ones
-table_GO <- GenTable(GOdata, Fisher = fisher_GO, orderBy = "Fisher" ,topNodes = 45)
+table_GO <- GenTable(GOdata, Fisher = fisher_GO, orderBy = "Fisher" ,topNodes = 20)
 table_GO #A table of significant terms
 table_GO$Fisher = as.numeric(table_GO$Fisher)
 table_GO = table_GO[table_GO$Fisher<0.05, ]
 table_GO = table_GO[, c("GO.ID", "Term", "Fisher")]
 
+#green bp
+newName = c("resp. to ext. biotic stim.", "resp. to other organism", "resp. to biotic stim.", "interspecies interactions", "defense response", "def. resp. to other org.", "resp. to ext. stimulus", "resp. to bacterium", "def. resp. to bacterium", "systemic acquired resistance", "response to fungus", "response to stress", "SA signaling pathway", "cellular resp. to SA", "response to SA", "programmed cell death", "cell death", "reg. of def. response", "def. resp. to fungus", "response tp oomycetes")
+
+newName = c("carbohydrate binding", "anion binding", "small molecule binding", "transferase activity", "kinase activity", "catalytic activity", "purine nucelotide binding", "carbohydrate derivative binding", "protein kinase activity", "ion binding", "dioxygenase activity", "puring ribonucleotide binding", "nucleotide binding", "nucleoside phosphate binding", "protein catalytic activity", "protein serine/threonine kinase activity", "ribonucleotide binding", "phos. group transferase activity", "adenyl nucleotide binding", "calcium ion binding")
+
+newName = c("cell periphery", "plasma membrane", "clathrin-coated vesicle memb.", "intrinsic comp. of memb.", "integral comp. of memb.", "extracellular region", "clathrin-coated vesicle", "membrane", "golgi transport complex","endoplasmic reticulum", "ER lumen", "late endosome membrane", "clathrin coat", "endomembrane system", "vesicle tethering complex", "early endosome", "clathrin vesicle coat", "GGTase complex", "coated vesicle membrane", "cytoplasmic vesicle membrane" 
+)
+
+            "clathrin adaptor complex", "membrane", "clathrin-coated vesicle", "vesicle tethering complex", "exocyst", "clathrin coat", "clathrin adaptor", "clathrin-coated pit", "extracellular region", "golgi transport complex", , "clathrin vesicle coat", "phagocytic vesicle", "pollen tube", "coated vesicle memb.", "integral comp. of memb.", "PeBoW complex")
+
+#---------------------------
 newName = c("defense response", "resp. to biotic stim.", "resp. to ext. biotic stim.", "resp. to other organism", "def. resp. to other org.", "interspecies interaction", "immune system process", "protein phosphorylation", "response to stress", "response to drug", "resp. to external stim.", "resp. to bacterium", "phosphorylation", "def. resp. to bacterium", "immune response", "innate immune response", "signal transduction", "signaling", "cell communication", "response to stimulus")
 
 newName = c("cell periphery", "plasma membrane", "clathrin-coated vesicle memb.", "clathrin adaptor complex", "membrane", "clathrin-coated vesicle", "vesicle tethering complex", "exocyst", "clathrin coat", "clathrin adaptor", "clathrin-coated pit", "extracellular region", "golgi transport complex", "intrinsic comp. of memb.", "clathrin vesicle coat", "phagocytic vesicle", "pollen tube", "coated vesicle memb.", "integral comp. of memb.", "PeBoW complex")
@@ -311,14 +323,14 @@ table_GO$Term = newName
 table_GO$Term <- factor(table_GO$Term, levels=rev(table_GO$Term))
 
 
-pdf("AUGs CC.pdf",height = 7, width = 7)
+pdf("green CC.pdf",height = 7, width = 7)
 ggplot(table_GO, aes(x=Term, y=-log10(Fisher))) +
     stat_summary(geom = "bar", fun = mean) +
     xlab("Cellular component") +
     ylab("Enrichment (-log10(p-val))") +
-    # scale_y_reverse(breaks = round(seq(0, max(-log10(table_GO$Fisher)), by = 2), 1)) +
+    #scale_y_reverse(breaks = round(seq(0, max(-log10(table_GO$Fisher)), by = 2), 1)) +
     scale_y_continuous(breaks = round(seq(0, max(-log10(table_GO$Fisher)), by = 2), 1)) +
-    scale_x_discrete(position = "top") +
+    scale_x_discrete(position = "top") + #top = right side of final plot, bottom = left
     theme_bw(base_size=24) +
     theme(
         panel.grid.major = element_blank(),
@@ -344,8 +356,8 @@ showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 20, useInfo = 'all')
 
 #GO term -> significant genes in goi list
 allGO = genesInTerm(GOdata)
-sigGenes = lapply(allGO,function(x) x[x %in% names(geneList[geneList==1])] )
-objectSymbol[sigGenes[["GO:0006952"]]]
+sigGenes = lapply(allGO,function(x) x[x %in% names(geneList2[geneList2==1])] )
+objectSymbol[sigGenes[["GO:0030665"]]]
 
 objectSymbol[names(geneList[geneList==1])]
 

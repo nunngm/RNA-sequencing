@@ -381,4 +381,6 @@ find.volcano = function(hour, n = 15, de = 0, lfc.cut = log2(1.5), adjp.cut = 0.
         return(data)
 }
 
+#save.image("ARR-RNA-seqimage.RData")
+load("ARR-RNA-seqimage.RData")
 

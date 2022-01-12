@@ -173,7 +173,7 @@ par(cex=0.5)
 ggsave("select_clust_heatmap.pdf", dendro_heatmap,
        height=6, width = 7, units = "in")
 
-pdf(file = "all_clust_heatmap.pdf")
+pdf(file = "all_dendo_clust_heatmap.pdf")
 heatmap_full <- ggplot(data = correlation_ggplot, 
                         aes(x = Var2, y = Var1)) +
     geom_tile(aes(fill =value), colour="darkgrey") +
@@ -194,8 +194,10 @@ geneClusters <- network$colors
 genenames <- rownames(allgenes)
 names(clustcolours) <- genenames
 
-genesOI = names(clustcolours[clustcolours == "saddlebrown"])
+genesOI = names(clustcolours[clustcolours == "green"])
 objectSymbol[genesOI]
+temp = cbind(genesOI, objectSymbol[genesOI])
+View(temp)
 
 volGenes = find.volcano(hour = "12")
 sum(genesOI %in% rownames(volGenes[volGenes$de == "UP", ]))

@@ -236,6 +236,8 @@ genes.info = function(lst, hpi, linear = T, mock = F){
      colnames(df) = c("Accession", "Gene name", "Mean count", "Y.Pst-Y.Mock LFC", "q-val", "M.Pst-M.Mock LFC", "q-val", "Gene description")
      return(df)
 }
+# For a given list of genes collect all the relevent information at a given time point
+genes.info = function(lst, hpi, linear = T, mock = F)
 
 ## Takes an gene accession number and displays/saves the plot of gene expression over time
 view.gene = function(accession, fileName = objectSymbol[toupper(accession)], graph = F){

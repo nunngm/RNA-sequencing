@@ -47,10 +47,10 @@ txi = tximport(files, type = "salmon",txOut = T, countsFromAbundance = "no")
 
 ## Generate tx2gene file
 txdb.filename = "./arabidopsisReference/araport11.201606.Jan2022.annotation.sqlite"
-# #Make TxDb database (only needed once)
-# gtf = "./arabidopsisReference/Araport11_GFF3_genes_transposons.Jan032022.gff"
-# txdb = makeTxDbFromGFF(gtf, format = "gtf", taxonomyId = 3702)
-# saveDb(txdb, txdb.filename)
+#Make TxDb database (only needed once)
+gtf = "./arabidopsisReference/Araport11_GFF3_genes_transposons.Jan032022.gff"
+txdb = makeTxDbFromGFF(gtf)
+saveDb(txdb, txdb.filename)
 
 # Load txDB file
 txdb <- loadDb(txdb.filename)

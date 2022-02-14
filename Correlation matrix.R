@@ -204,8 +204,14 @@ sum(genesOI %in% rownames(volGenes[volGenes$de == "UP", ]))
 selectGenes = genesOI[genesOI %in% rownames(volGenes[volGenes$de == "UP", ])]
 selectGenes = objectSymbol[selectGenes]
 selectGenes[selectGenes == "AT2G13810"]
-# 308/848 
+# 308/848
+name = "grey60"
 
+genesOI = names(clustcolours[clustcolours == name])
+temp = genes.info(genesOI, hpi = "0", mock = T)
+write.xlsx(temp, paste0(name, ".xlsx"), sheetName = "0h", col.names = T, row.names = T, append = T)
+temp = genes.info(genesOI, hpi = "24", mock = T)
+write.xlsx(temp, paste0(name, ".xlsx"), sheetName = "24h", col.names = T, row.names = T, append = T)
 
 ## What about ALL DEGS?? 
 ## let's put all DEGs into a list, then are able to see which cluster(s) entire groups of degs are in!

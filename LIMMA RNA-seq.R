@@ -46,18 +46,22 @@ design_full
 txi = tximport(files, type = "salmon",txOut = T, countsFromAbundance = "no")
 
 ## Generate tx2gene file
-txdb.filename = "./arabidopsisReference/araport11.201606.Jan2022.annotation.sqlite"
-# #Make TxDb database (only needed once)
-# gtf = "./arabidopsisReference/Araport11_GFF3_genes_transposons.Jan032022.gff"
-# txdb = makeTxDbFromGFF(gtf, format = "gtf", taxonomyId = 3702)
+txdb.filename = "./arabidopsisReference/Arabidopsis_thaliana.TAIR10.52.annotation.sqlite"
+#Make TxDb database (only needed once)
+
+# gtf = "./arabidopsisReference/Arabidopsis_thaliana.TAIR10.52.gff3"
+# txdb = makeTxDbFromGFF(gtf, format = "gff3", organism = "Arabidopsis thaliana", taxonomyId = 3702)
 # saveDb(txdb, txdb.filename)
 
 # Load txDB file
 txdb <- loadDb(txdb.filename)
 
+txdf <- AnnotationDbi::select(txdb, keys(txdb, "CDSNAME"), "GENEID", "CDSNAME")
 txi = summarizeToGene(txi, tx2gene = txdf, countsFromAbundance = "no") #summarize transcript level data to gene-level
 cts = txi$counts
-cts = cts[rowSums(cts) > 0, ] # throw out any transcript with no reads
+cts = cts[rowSums(cts) > 360, ] # throw out any transcript with no reads
+# cts = cts[,c(4:9, 13:18, 22:27, 31:36)]
+# design_full = design_full[c(4:9, 13:18, 22:27, 31:36), ]
 
 # Make sample dataframe
 samps = as.data.frame(cbind(rownames(design_full), paste(as.character(design_full[ ,3]), as.character(design_full[, 4]), as.character(design_full[, 5]) ,sep = "_")))
@@ -66,18 +70,35 @@ class(samps)
 colnames(samps) = c("sample_id", "group")
 
 
-##Very general model that just has all the sample information
-model_full <- formula(~age+infection+hpi)
-rawData <- DESeqDataSetFromHTSeqCount(design_full,design=model_full)
-counts = counts(rawData)
+
 
 #Transition into LIMMA
 dge= DGEList(counts = cts, samples = samps)
 design = cbind(factor(design_full[, 3], levels = c("y", "m")), factor(design_full[, 4], levels = c("mg", "pst")), factor(design_full[, 5]))
-keep = filterByExpr(dge, design, min.total.count = 360)
-dge = dge[keep,,keep.lib.sizes=F]
-dge = calcNormFactors(dge)
+
+
+group = interaction(age,infection,hpi)
+mm = model.matrix(~0+group)
+colnames(mm) = c("y.mg.0", "m.mg.0", "y.pst.0", "m.pst.0", "y.mg.12", "m.mg.12", "y.pst.12", "m.pst.12", "y.mg.24", "m.mg.24", "y.pst.24", "m.pst.24")
+# keep = filterByExpr(dge, design, min.total.count = 360)
+# dge = dge[keep,,keep.lib.sizes=F]
+# dge = calcNormFactors(dge)
 
 ##The samples are relatively close in library size so I'm going to use limma-trend
-logCPM = cpm(dge, log = T, prior.count = 3)
-fit = lmfit(logCPM, design)
+voomcts = voom(dge, design, plot = T)
+voomcts = voom(dge, mm, plot = T)
+fit = lmFit(voomcts, mm)
+head(coef(fit))
+
+ct.m = makeContrasts(Dif0hr =(m.pst.0-m.mg.0)-(y.pst.0-y.mg.0),
+  Dif12hr =(m.pst.12-m.mg.12)-(y.pst.12-y.mg.12), 
+  Dif24hr =(m.pst.24-m.mg.24)-(y.pst.24-y.mg.24),
+  levels = mm)
+fit2 = contrasts.fit(fit, ct.m)
+fit2 <- eBayes(fit2)
+top.table = topTable(fit2, n = Inf)
+
+
+objectSymbol[rownames(head(top.table, 80))]
+
+plot

@@ -193,7 +193,7 @@ genes.info = function(lst, hpi, linear = T, mock = F){
      res_y= results(allData,contrast = c("group", paste0("ypst", hpi), paste0("ymg", hpi)), alpha = 0.05, pAdjustMethod="BH")
      res_y = as.data.frame(res_y@listData, row.names = res_y@rownames)
 
-     res_m = results(allData,contrast = c("group", paste0("mpst", hpi), paste0("mmg", hpi)),alpha =0.05, pAdjustMethod = "BH")
+     res_m = results(allData,contrast = c("group", paste0("mpst", hpi), paste0("ymg", hpi)),alpha =0.05, pAdjustMethod = "BH")
      res_m = as.data.frame(res_m@listData, row.names = res_m@rownames)
      
      yfc = res_y$log2FoldChange[rownames(res_y) %in% lst]
@@ -220,7 +220,7 @@ genes.info = function(lst, hpi, linear = T, mock = F){
                mfc, 
                desvec[lst]
           )
-          colnames(df) = c("Accession", "Gene name", "Mean count", "Y.Pst-Y.Mock LFC", "M.Mock-Y.Mock LFC", "M.Pst-M.Mock LFC", "Gene description")
+          colnames(df) = c("Accession", "Gene name", "Mean count", "Y.Pst-Y.Mock LFC", "M.Mock-Y.Mock LFC", "M.Pst-Y.Mock LFC", "Gene description")
           return(df)
      }
      

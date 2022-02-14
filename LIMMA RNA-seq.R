@@ -53,6 +53,7 @@ txdb.filename = "./arabidopsisReference/Arabidopsis_thaliana.TAIR10.52.annotatio
 # txdb = makeTxDbFromGFF(gtf, format = "gff3", organism = "Arabidopsis thaliana", taxonomyId = 3702)
 # saveDb(txdb, txdb.filename)
 
+
 # Load txDB file
 txdb <- loadDb(txdb.filename)
 

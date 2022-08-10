@@ -64,21 +64,42 @@ finalLFC = cbind(allComp$ypst0ymg0[GOI, 2], allComp$mmg0ymg0[GOI,2], mpstcomp[[1
 
 rownames(finalLFC) = rownames(allComp$ypst0ymg0)[rownames(allComp$ypst0ymg0) %in% genes_of_interest]
 colnames(finalLFC) = c("Y.Pst", "M.Mock", "M.Pst","Y.Pst", "M.Mock", "M.Pst", "Y.Pst", "M.Mock", "M.Pst" )
-
+finalLFC[ rownames(finalLFC)==names(labels),]
 
 #Working on
 
 
 #worked
-hmcol1 = sequential_hcl(n = 10, h = 70, c = 200, l = c(150,20), power = 0.8, rev = T)
+hmcol1 = sequential_hcl(n = 10, h = 17, c = 117, l = c(64,100), power = 0.5, rev = T)
 show_col(hmcol1)
-hmcol2 = sequential_hcl(n = 10, h = 230, c = 80, l = c(80,20), power = 0.4)
+hmcol2 = sequential_hcl(n = 10, h = 215, c = 41, l = c(46,100), power =0.5)
 show_col(hmcol2)
-hmcol = c(hmcol2[1:9], "#000000", hmcol1[2:10]) 
+hmcol = c(hmcol2[1:9], "#FFFFFF", hmcol1[2:10]) 
 show_col(hmcol)
 
+hmcol1 = sequential_hcl(n = 10, h = 13, c = 177, l = c(54,100), power = 0.4, rev = T)
+show_col(hmcol1)
+hmcol2 = sequential_hcl(n = 10, h = 266, c = 131, l = c(33,100), power =0.4)
+show_col(hmcol2)
+hmcol = c(hmcol2[1:9], "#FFFFFF", hmcol1[2:10]) 
+show_col(hmcol)
+
+heatmap_full <- ggplot(data = as.data.frame(finalLFC), 
+                        aes(x = Var2, y = Var1)) +
+    geom_tile(aes(fill =value), colour="darkgrey") +
+    scale_fill_gradient2(midpoint = 0, low = "#00798C", #mid = "white", 
+                         high = "#FF6F59", na.value = "white", name = "Correlation", 
+                         limits=c(-1, 1), breaks=seq(-1,1,by=0.5)) + 
+    labs(x="Ecotype and Condition", y="Clusters") +  theme_bw() + #theme(axis.text.y=element_blank(), plot.margin = margin(-0.75, 0, 0,0 , "cm")))
+    theme(axis.text.y=element_text(angle=20,vjust=0.5), axis.text.x = element_text(angle = -30, vjust = 0.5, hjust = 0, size = 9) , plot.margin = margin(-0.75, 0, 0,0 , "cm"))
+heatmap_full
+
+labels = setNames(mydata$label ,mydata$accsession)
+finalLFC = finalLFC[unlist2(lapply(names(labels), function(x){grep(x,rownames(finalLFC))})),]
+grep()
 tiff("rplot2.tiff", width = 4000, height = 2000)
-aheatmap(finalLFC, color = hmcol, Rowv = T, Colv = NA, distfun= "euclidean",treeheight = 200,hclustfun = "average", scale = "none", cellwidth = 320, breaks =0)
+svg(filename = "GN select genes-unclustered.svg",width = 5, height = 4)
+aheatmap(finalLFC, color = hmcol, border_color = "#888888", Rowv = NA, Colv = NA, distfun= "euclidean",hclustfun = "average", scale = "none", labRow = labels[rownames(finalLFC)], breaks =0)
 dev.off()
 
 pdf()

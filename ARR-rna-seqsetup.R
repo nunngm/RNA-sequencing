@@ -140,8 +140,10 @@ compare.group = function(age = c("y", "m"), infection = c("mg", "pst"), hpi = c(
 # contrast = c(intgroup,Var1, Var2) -> contrasts Var 1 to reference (Var2)
 # pAdjustMethod ="BH" -> adjust the p-value based on the false discovery rate
 ##The compare.group() function does a much better job of this -> use that
-res_y= results(allData,contrast = c("group", "ypst24", "ymg24"), alpha = 0.05, pAdjustMethod="BH")
+res_y= results(allData,contrast = c("group", "mpst12", "mmg12"), alpha = 0.05, pAdjustMethod="BH")
 res_y = as.data.frame(res_y@listData, row.names = res_y@rownames)
+res_y = res_y[is.na(res_y$padj)==F,]
+temp = rownames(res_y[res_y$log2FoldChange>1 & res_y$padj<0.05,])
 
 res_m = results(allData,contrast = c("group","mpst24","mmg24"),alpha =0.05, pAdjustMethod = "BH")
 res_m = as.data.frame(res_m@listData, row.names = res_m@rownames)

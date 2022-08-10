@@ -77,7 +77,7 @@ network = blockwiseModules(t(allgenes), power = 6,
                            verbose = 3, maxBlockSize = 10000)
 
 ## if you save this, it is much quicker to run
-# save.image("blockwiseNetwork.RData")
+save.image("limma.blockwiseNetwork.RData")
 load("blockwiseNetwork.RData")
 
 
@@ -173,7 +173,7 @@ par(cex=0.5)
 ggsave("select_clust_heatmap.pdf", dendro_heatmap,
        height=6, width = 7, units = "in")
 
-pdf(file = "all_dendo_clust_heatmap.pdf")
+pdf(file = "all_dendo_clust_heatmap-limma.pdf")
 heatmap_full <- ggplot(data = correlation_ggplot, 
                         aes(x = Var2, y = Var1)) +
     geom_tile(aes(fill =value), colour="darkgrey") +
@@ -195,7 +195,7 @@ genenames <- rownames(allgenes)
 names(clustcolours) <- genenames
 
 genesOI = names(clustcolours[clustcolours == "green"])
-objectSymbol[genesOI]
+     objectSymbol[genesOI]
 temp = cbind(genesOI, objectSymbol[genesOI])
 View(temp)
 
@@ -205,11 +205,13 @@ selectGenes = genesOI[genesOI %in% rownames(volGenes[volGenes$de == "UP", ])]
 selectGenes = objectSymbol[selectGenes]
 selectGenes[selectGenes == "AT2G13810"]
 # 308/848
-name = "grey60"
+name = "green"
 
 genesOI = names(clustcolours[clustcolours == name])
 temp = genes.info(genesOI, hpi = "0", mock = T)
-write.xlsx(temp, paste0(name, ".xlsx"), sheetName = "0h", col.names = T, row.names = T, append = T)
+write.xlsx(temp, paste0(name, ".xlsx"), sheetName = "0.25h", col.names = T, row.names = T)
+temp = genes.info(genesOI, hpi = "12", mock = T)
+write.xlsx(temp, paste0(name, ".xlsx"), sheetName = "12h", col.names = T, row.names = T, append = T)
 temp = genes.info(genesOI, hpi = "24", mock = T)
 write.xlsx(temp, paste0(name, ".xlsx"), sheetName = "24h", col.names = T, row.names = T, append = T)
 

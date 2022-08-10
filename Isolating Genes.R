@@ -10,7 +10,6 @@ lfc_cutoff = 0
 allGenes = lapply(res, function(x){
           up = x[x$log2FoldChange > lfc_cutoff, ]$padj #collect genes where fold change is positive (up-regulated)
           names(up) = rownames(x[x$log2FoldChange > lfc_cutoff, ]) #collect the genenames
-          up = up[complete.cases(up)]
           up = names(up[up < pval])
           down = x[x$log2FoldChange < lfc_cutoff, ]$padj #collect genes where fold change is positive (up-regulated)
           names(down) <- rownames(x[x$log2FoldChange < lfc_cutoff, ]) #collect the genenames

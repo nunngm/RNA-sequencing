@@ -265,7 +265,7 @@ sigGenes_y = results(allData, contrast = c("group", "ypst12", "ymg12"), alpha = 
 sigGenes_y = sigGenes_y[ is.na(sigGenes_y$padj) == F,]
 sigGenes_y = sigGenes_y[sigGenes_y$log2FoldChange > 1  & sigGenes_y$padj < 0.05,]
 
-sigGenes_m = results(allData, contrast = c("group", "mpst12", "mmg12"), alpha = 0.05, tidy = T)
+sigGenes_m = results(allData, contrast = c("group", "mpst24", "mmg24"), alpha = 0.05, tidy = T)
 sigGenes_m = sigGenes_m[ is.na(sigGenes_m$padj) == F,]
 sigGenes_m = sigGenes_m[sigGenes_m$log2FoldChange > 1  & sigGenes_m$padj < 0.05,]
 
@@ -273,11 +273,11 @@ sigGenes_mmock = results(allData, contrast = c("group", "mmg12", "ymg12"), alpha
 sigGenes_mmock = sigGenes_mmock[ is.na(sigGenes_mmock$padj) == F,]
 sigGenes_mmock = sigGenes_mmock[sigGenes_mmock$log2FoldChange > 1  & sigGenes_mmock$padj < 0.05,]
 
-sigGenes_eti = results(etiData, contrast = c("group", "rpm1_12", "mock_12"),  alpha = 0.05, tidy = T)
+sigGenes_eti = results(etiData, contrast = c("group", "rpm1_24", "mock_24"),  alpha = 0.05, tidy = T)
 sigGenes_eti = sigGenes_eti[ is.na(sigGenes_eti$padj) == F,]
 sigGenes_eti = sigGenes_eti[sigGenes_eti$log2FoldChange > 1  & sigGenes_eti$padj < 0.05,]
 
-sigGenes_pti = results(ptiData, contrast = c("group", "flg_12hpt", "ctrl_12hpt"),  alpha = 0.05, tidy = T)
+sigGenes_pti = results(ptiData, contrast = c("group", "flg_24hpt", "ctrl_24hpt"),  alpha = 0.05, tidy = T)
 sigGenes_pti = sigGenes_pti[ is.na(sigGenes_pti$padj) == F,]
 sigGenes_pti = sigGenes_pti[sigGenes_pti$log2FoldChange > 1  & sigGenes_pti$padj < 0.05,]
 
@@ -291,8 +291,8 @@ colors = qualitative_hcl(4, palette = "dark",c = 90)
 show_col(colors[1:4] )
 
 venn.diagram(x = list(sigGenes_m$row, sigGenes_eti$row, sigGenes_pti$row),
-             category.names = c("Mature", "ETI", "PTI"),
-             filename = "12h Mature-ETI-PTI.tiff",
+             category.names = c("ARR", "ETI", "PTI"),
+             filename = "12h ARR-ETI-PTI12hpt.tiff",
              output = T,
              imagetype = "tiff",
              euler.d = F,
@@ -304,12 +304,12 @@ venn.diagram(x = list(sigGenes_m$row, sigGenes_eti$row, sigGenes_pti$row),
              cat.dist = c(0.12, 0.12,0.12),
              margin =0.15)
 
-GOI = sigGenes_m$row[ sigGenes_m$row %in% sigGenes_eti$row]
+GOI = sigGenes_eti$row[ sigGenes_eti$row %in% sigGenes_pti$row]
 
-GOI = rownames(sigGenes_m)[! rownames(sigGenes_m) %in% sigGenes_eti$row]
+GOI = rownames(sigGenes_m)[ rownames(sigGenes_m) %in% sigGenes_pti$row]
 
 GOI = GOI[ GOI %in% sigGenes_pti$row]
-GOI = GOI[! GOI %in% sigGenes_y$row]
+GOI = GOI[ GOI %in% sigGenes_m$row]
 
 
 #------ Mock vs Mock

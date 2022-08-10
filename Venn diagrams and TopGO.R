@@ -33,10 +33,10 @@ show_col(colors)
 temp = c(tmp)
 #Two-way venn diagram - More useful
 
-vennGenes = list(microGenes,mature)
+vennGenes = list(green, volcano_genes)
 allGenes = unique(c(vennGenes[[1]], vennGenes[[2]]))
 venn.diagram(x = list(vennGenes[[1]],vennGenes[[2]]),
-             category.names = c("pen3 hyperinduced", "Mature uniquely up"),
+             category.names = c("green", "blue"),
              filename = "temp.tiff",
              output = T,
              inverted = T,
@@ -51,11 +51,13 @@ venn.diagram(x = list(vennGenes[[1]],vennGenes[[2]]),
              margin =0.15)
 
 #Specifies which part of the Venn diagram you would like to complete GO enrichment on
-geneList = as.integer(allGenes %in% vennGenes[[1]])
+geneList = as.integer(allGenes %in% vennGenes[[2]])
 names(geneList) = allGenes
-geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% vennGenes[[2]])
+geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% vennGenes[[1]])
 geneList[geneList==1] = as.integer( names(geneList[geneList==1])%in% sg_mock)
 sum(geneList)
+
+objectSymbol[names(geneList[geneList==1])]
 
 getGeneName(names(geneList[geneList==1]))
 
@@ -72,7 +74,7 @@ geneList2 = as.factor(geneList2)
 
 #Does the GO enrichment (BP, MF, or CC)
 GOdata <- new("topGOdata",
-              ontology = "MF", 
+              ontology = "BP", 
               allGenes = geneList2,  
               annotationFun = annFUN.gene2GO, 
               gene2GO = gene_GO) 
@@ -92,7 +94,7 @@ showSigOfNodes(GOdata, score(fisher_GO), firstSigNodes = 20, useInfo = 'all')
 #GO term -> significant genes in goi list
 allGO = genesInTerm(GOdata)
 sigGenes = lapply(allGO,function(x) x[x %in% names(geneList2[geneList2==1])] )
-objectSymbol[sigGenes[["GO:0005215"]]]
+objectSymbol[sigGenes[["GO:0009863"]]]
 
 tmp = data[rownames(data) %in% sigGenes[["GO:0010168"]], ]
 

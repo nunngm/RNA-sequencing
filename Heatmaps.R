@@ -93,12 +93,13 @@ heatmap_full <- ggplot(data = as.data.frame(finalLFC),
     labs(x="Ecotype and Condition", y="Clusters") +  theme_bw() + #theme(axis.text.y=element_blank(), plot.margin = margin(-0.75, 0, 0,0 , "cm")))
     theme(axis.text.y=element_text(angle=20,vjust=0.5), axis.text.x = element_text(angle = -30, vjust = 0.5, hjust = 0, size = 9) , plot.margin = margin(-0.75, 0, 0,0 , "cm"))
 heatmap_full
+mydata= read.table(file= "clipboard",sep= "\t",header =T)
+labels = setNames(mydata$label ,mydata$accession)
 
-labels = setNames(mydata$label ,mydata$accsession)
 finalLFC = finalLFC[unlist2(lapply(names(labels), function(x){grep(x,rownames(finalLFC))})),]
 grep()
 tiff("rplot2.tiff", width = 4000, height = 2000)
-svg(filename = "GN select genes-unclustered.svg",width = 5, height = 4)
+svg(filename = "ETI heatmap-redux.svg",width = 5, height = 4)
 aheatmap(finalLFC, color = hmcol, border_color = "#888888", Rowv = NA, Colv = NA, distfun= "euclidean",hclustfun = "average", scale = "none", labRow = labels[rownames(finalLFC)], breaks =0)
 dev.off()
 

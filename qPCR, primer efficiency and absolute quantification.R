@@ -50,6 +50,8 @@ aggregate(Ct ~ gene, df, mean)
 df = df[ order(df$gene, df$type, df$rep), ]#The data frame MUST be ordered correctly before starting this analysis all samples need to be in the correct location, check they are match before running
 df = cbind(df,sample = paste(df[df$gene == df$gene[], ]$type, df[df$gene == df$gene[], ]$rep, sep = "_"))
 
+refGeneName = "SEC5A"
+
 # convert to wide format
 mat = matrix(NA, ncol = length(levels(as.factor(df$gene))), nrow = length(paste(df[df$gene == refGeneName, ]$type, df[df$gene == refGeneName, ]$rep, sep = "_")))
 colnames(mat) = levels(as.factor(df$gene))
@@ -59,8 +61,7 @@ for (i in 1:nrow(df)){
 }
 df.wide = as.data.frame(mat)
 
-refGeneName = "SEC5A"
-targetGeneName = "RLP28"
+
 
 #Differential expression analysis 
 refGeneExp = setNames(df.wide[[refGeneName]], rownames(df.wide)) #Change this to enter your reference gene expression (if from another plate that worked well you will be able to compare to the whole plate)
@@ -78,14 +79,15 @@ expression = cbind(as.data.frame(lapply(df.wide[,1:ncol(df.wide)-1], function(x)
 aggregate(. ~ type, expression[, 1:ncol(expression)-1], mean) # quick check the means to see expression
 
 # Clean up the data frame
-expression$type = as.factor(as.integer(expression$type)+3)
+expression$type = as.factor(as.integer(expression$type)+2)
 #expression = expression[7:nrow(expression),] # removing 1-2 wpg samples
 
 ## Plotting
 is_outlier <- function(x) {
   return(x < quantile(x, 0.25, na.rm = T) - 1.5 * IQR(x, na.rm=T) | x > quantile(x, 0.70, na.rm = T) + 1.5 * IQR(x,na.rm = T))
 } ## Function for determining outliers
-     
+
+targetGeneName = "UGT76B1"
 p = expression %>%
      group_by(type) %>%
      mutate(inlier = ifelse(is_outlier(!!as.name(targetGeneName)), as.numeric(NA), !!as.name(targetGeneName)), outlier = ifelse(is_outlier(!!as.name(targetGeneName)), !!as.name(targetGeneName), as.numeric(NA)) ) %>%
@@ -98,7 +100,7 @@ p = expression %>%
           geom = "errorbar", lty =1 , size =0.75, width = 0.25, colour = "#000000") +
      #geom_boxplot(fill = rep(c("#FFFFFF"), 5)) +
      geom_jitter(width = 0.25, color= "#000000", size = 2, alpha = 0.4) +
-     geom_point(aes(x = type, y = outlier), size =2, alpha = 1, shape = 8, colour = "#000000") +
+     geom_point(aes(x = type, y = outlier), size =2, alpha = 1, shape = 17, colour = "#000000") +
      scale_y_continuous(expand = expansion(c(0, 0.1)))   +
 theme(
       legend.position="none",
@@ -116,7 +118,7 @@ theme(
     axis.text = element_text(color = "black", size=15)
 )
 p 
-ggsave(file = paste0(targetGeneName,"_WKEX-22-2.svg"), plot = p, width = 5, height = 4)
+ggsave(file = paste0(targetGeneName,"_WKEX-22-3.svg"), plot = p, width = 5, height = 4)
 
 ## Stats
 # Label inliers

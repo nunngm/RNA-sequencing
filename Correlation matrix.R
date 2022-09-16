@@ -194,7 +194,7 @@ geneClusters <- network$colors
 genenames <- rownames(allgenes)
 names(clustcolours) <- genenames
 
-genesOI = names(clustcolours[clustcolours == "green"])
+genesOI = names(clustcolours[clustcolours == "greenyellow"])
      objectSymbol[genesOI]
 temp = cbind(genesOI, objectSymbol[genesOI])
 View(temp)

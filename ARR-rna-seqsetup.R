@@ -25,6 +25,9 @@ setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\
 #Desktop directory
 setwd("C:\\Users\\garrett\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-R workshop")
 
+#save.image("ARR-RNA-seqimage.RData")
+load("ARR-RNA-seqimage.RData")
+
 
 gene_associations <- read.delim("gene_association_final.txt", comment.char = "!", header = FALSE, as.is = TRUE) 
 colnames(gene_associations) <- c("DB", "DB_Object_ID", "DB_Object_Symbol", "Qualifier", "GO_ID",
@@ -385,6 +388,4 @@ find.volcano = function(hour, n = 15, de = 0, lfc.cut = log2(1.5), adjp.cut = 0.
         return(data)
 }
 
-#save.image("ARR-RNA-seqimage.RData")
-load("ARR-RNA-seqimage.RData")
 

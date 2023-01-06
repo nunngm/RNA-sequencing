@@ -158,17 +158,24 @@ py <- ggdend(dy$segments) + coord_flip()
 
 clust.of.interest <- c("green", "greenyellow", "skyblue3", "saddlebrown", "grey60", "darkolivegreen", "navajowhite2", "salmon4", "magenta", "yellow")
 clust.of
+
+correlation_ggplot$Var2 = factor(correlation_ggplot$Var2, levels = c("Y_Mock_0.25", "Y_Pst_0.25", "Y_Mock_12", "Y_Pst_12", "Y_Mock_24", "Y_Pst_24", "M_Mock_0.25", "M_Pst_0.25", "M_Mock_12", "M_Pst_12", "M_Mock_24", "M_Pst_24"))
 par(cex=0.5)
+midpoint = 0, low = "#00798C", mid = "white", 
+high = "#FF6F59"
 (heatmap <- ggplot(data = correlation_ggplot %>% filter(., Var1 %in% clust.of.interest), 
                    aes(x = Var2, y = Var1)) +
     geom_tile(aes(fill =value), colour="darkgrey") +
-    scale_fill_gradient2(midpoint = 0, low = "#8AA399", mid = "white", 
-                         high = "#FF8977", na.value = "white", name = "Correlation", 
+    scale_fill_gradient2(midpoint = 0, low = "#0000FF", mid = "white", 
+                         high = "#FF0000", na.value = "white", name = "Correlation", 
                          limits=c(-1, 1), breaks=seq(-1,1,by=0.5)) + 
-    labs(x="Ecotype and Condition", y="Clusters") +  theme_bw() + #theme(axis.text.y=element_blank(), plot.margin = margin(-0.75, 0, 0,0 , "cm")))
-    theme(axis.text.y=element_text(angle=20,vjust=0.5), axis.text.x = element_text(angle = -30, vjust = 0.5, hjust = 0, size = 9), plot.margin = margin(-0.75, 0, 0,0 , "cm")))
+    labs(x="", y="") +  theme_bw() + #theme(axis.text.y=element_blank(), plot.margin = margin(-0.75, 0, 0,0 , "cm")))
+    theme(axis.text.y=element_text(angle=0,vjust=0.5, size = 15), axis.text.x = element_text(angle = -30, vjust = 1, hjust = 0, size = 9), plot.margin = margin(-0.75, 0, 0,0 , "cm")))
 (dendro_heatmap <- px + heatmap + plot_layout(ncol = 1, heights = c(1, 5))) # + plot_layout(ncol=2, widths=(1,5))
 (heatmap = heatmap + plot_layout(ncol = 1, heights = 1))
+
+svg(filename = "select_clust_heatmap.svg", width = 8, height = 6)
+dev.off()
 
 ggsave("select_clust_heatmap.pdf", dendro_heatmap,
        height=6, width = 7, units = "in")

@@ -96,7 +96,7 @@ AutomatedStats = function(md, noTukey = F){
     return(results)
   }
   y=NULL #this was designed to be an output variable if you need to output both stats table and tukey grouping
-  y$groups= HSD.test(anovaModel, alpha=0.05, "type", console=T)$groups#gives letter codes but no p values
+  y$groups = HSD.test(anovaModel, alpha=0.05, "type", console=T)$groups#gives letter codes but no p values
   y$stats=results
   return(y)
 }

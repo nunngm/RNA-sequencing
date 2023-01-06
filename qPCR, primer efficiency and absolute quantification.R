@@ -12,8 +12,10 @@ library(dplyr)
 library(svglite)
 library(agricolae)
 library(car) 
+library(ggpattern)
 
 mydata= read.table(file= "clipboard",sep= "\t",header =T)
+mydata = mydata[,mydata[1,]!="BLANK" | is.na(mydata[1,]) == T] #Removes wells set as blank
 samples = as.character(mydata[1,2:ncol(mydata)])
 mydata = mydata[2:nrow(mydata),]
 mydata = as.data.frame(lapply(mydata, as.numeric))
@@ -27,13 +29,16 @@ setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\
 #Desktop directory
 setwd("C:\\Users\\garrett\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-qRT-PCR\\Primer Efficiency test")
 
+
 curves = lapply(2:ncol(mydata), function(x){
+    print(x)
      pcrfit(mydata, cyc = 1, fluo = x)})
 ## Determine the average threshold cycle
 E = data.frame(t(sapply(1:(ncol(mydata)-1), simplify = "array", function(x){efficiency(curves[[x]], type = "cpD2")})))
 unlist(E$eff)/2 #
 Ft = mean(unlist(E$fluo[E$fluo>100])) ##Might error out do to wells that don't amplify
 selSamples = mydata[40,2:ncol(mydata)]>Ft
+badSamps = groups[!selSamples,]
 groups = groups[selSamples,]
 mydata = mydata[,c(T, selSamples)]
 curves = lapply(2:ncol(mydata), function(x){pcrfit(mydata, cyc = 1, fluo = x)})
@@ -47,12 +52,14 @@ Emax = unlist(E$eff)/2 ##Generates the amplification frequencies of each well
 df = cbind(groups, Emax, Ct)
 aggregate(Emax ~ gene, df, mean) #check the means for each of the genes, should be 1+-0.1
 aggregate(Ct ~ gene, df, mean)
+df = rbind(df, cbind(badSamps,Emax = NA, Ct = NA)) #adds back in the bad samples with NA
 df = df[ order(df$gene, df$type, df$rep), ]#The data frame MUST be ordered correctly before starting this analysis all samples need to be in the correct location, check they are match before running
 df = cbind(df,sample = paste(df[df$gene == df$gene[], ]$type, df[df$gene == df$gene[], ]$rep, sep = "_"))
 
+# convert to wide format - make more efficient
 refGeneName = "SEC5A"
+targetGeneName = "ALD1"
 
-# convert to wide format
 mat = matrix(NA, ncol = length(levels(as.factor(df$gene))), nrow = length(paste(df[df$gene == refGeneName, ]$type, df[df$gene == refGeneName, ]$rep, sep = "_")))
 colnames(mat) = levels(as.factor(df$gene))
 rownames(mat) = paste(df[df$gene == refGeneName, ]$type, df[df$gene == refGeneName, ]$rep, sep = "_")
@@ -61,9 +68,9 @@ for (i in 1:nrow(df)){
 }
 df.wide = as.data.frame(mat)
 
+write.table(df.wide, "clipboard", sep = "\t", row.names = F)
 
-
-#Differential expression analysis 
+#-----------Differential expression analysis ----------------------------
 refGeneExp = setNames(df.wide[[refGeneName]], rownames(df.wide)) #Change this to enter your reference gene expression (if from another plate that worked well you will be able to compare to the whole plate)
                         
 df.wide = cbind(df.wide, refGeneExp)
@@ -78,8 +85,10 @@ rownames(df.wide) = paste(df[df$gene == refGeneName, ]$type, df[df$gene == refGe
 expression = cbind(as.data.frame(lapply(df.wide[,1:ncol(df.wide)-1], function(x){2^-(as.numeric(x)-as.numeric(df.wide$refGeneExp))}), row.names = rownames(df.wide)), t(as.data.frame(strsplit(rownames(df.wide), split = "_"), row.names = c("type", "rep"))), stringsAsFactors = T) # Takes the wide-format data frame and calculates the expression for the genes relative to the reference gene.
 aggregate(. ~ type, expression[, 1:ncol(expression)-1], mean) # quick check the means to see expression
 
+
+#### PLOT WEEKLY EXPRESSION
 # Clean up the data frame
-expression$type = as.factor(as.integer(expression$type)+2)
+expression$type = as.factor(as.integer(expression$type)+3)
 #expression = expression[7:nrow(expression),] # removing 1-2 wpg samples
 
 ## Plotting
@@ -87,7 +96,6 @@ is_outlier <- function(x) {
   return(x < quantile(x, 0.25, na.rm = T) - 1.5 * IQR(x, na.rm=T) | x > quantile(x, 0.70, na.rm = T) + 1.5 * IQR(x,na.rm = T))
 } ## Function for determining outliers
 
-targetGeneName = "UGT76B1"
 p = expression %>%
      group_by(type) %>%
      mutate(inlier = ifelse(is_outlier(!!as.name(targetGeneName)), as.numeric(NA), !!as.name(targetGeneName)), outlier = ifelse(is_outlier(!!as.name(targetGeneName)), !!as.name(targetGeneName), as.numeric(NA)) ) %>%
@@ -100,7 +108,7 @@ p = expression %>%
           geom = "errorbar", lty =1 , size =0.75, width = 0.25, colour = "#000000") +
      #geom_boxplot(fill = rep(c("#FFFFFF"), 5)) +
      geom_jitter(width = 0.25, color= "#000000", size = 2, alpha = 0.4) +
-     geom_point(aes(x = type, y = outlier), size =2, alpha = 1, shape = 17, colour = "#000000") +
+     geom_point(aes(x = type, y = outlier), size =2, alpha = 1, shape = 8, colour = "#000000") +
      scale_y_continuous(expand = expansion(c(0, 0.1)))   +
 theme(
       legend.position="none",
@@ -118,7 +126,42 @@ theme(
     axis.text = element_text(color = "black", size=15)
 )
 p 
-ggsave(file = paste0(targetGeneName,"_WKEX-22-3.svg"), plot = p, width = 5, height = 4)
+ggsave(file = paste0(targetGeneName,"_WKEX-22-2.svg"), plot = p, width = 5, height = 4)
+
+
+## Y&M, UN,MO,PST at 6 and 12 hpi
+
+p = expression %>%
+     group_by(type) %>%
+     mutate(inlier = ifelse(is_outlier(!!as.name(targetGeneName)), as.numeric(NA), !!as.name(targetGeneName)), outlier = ifelse(is_outlier(!!as.name(targetGeneName)), !!as.name(targetGeneName), as.numeric(NA)) ) %>%
+     ggplot(., aes(x=type, y=inlier, colour = rep)) +
+     stat_summary(fun = mean, geom = "bar", fill = rep(c( "#444444",
+          "#666666", "#9A9A9A", "#CDCDCD", "#FFFFFF"),2), colour = "#000000", size = 0.75) +
+     stat_summary(fun = mean,
+          fun.min = function(x) {mean(x) - sd(x)}, 
+          fun.max = function(x) {mean(x) + sd(x)}, 
+          geom = "errorbar", lty =1 , size =0.75, width = 0.25, colour = "#000000") +
+     #geom_boxplot(fill = rep(c("#FFFFFF"), 5)) +
+     geom_jitter(width = 0.25, color= "#000000", size = 2, alpha = 0.4) +
+     geom_point(aes(x = type, y = outlier), size =2, alpha = 1, shape = 8, colour = "#000000") +
+     scale_y_continuous(expand = expansion(c(0, 0.1)))   +
+theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) + 
+    xlab("Weeks post-germination (wpg)") + ylab(paste0(targetGeneName,"/SEC5A")) + theme(panel.grid.major = element_blank(),  
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(), 
+    axis.line = element_line(colour = "black", size=1),
+    axis.title.x=element_text(size=15),
+    #axis.text.x=element_blank()),
+    axis.ticks=element_line(colour = "black", size =1),
+    axis.ticks.length = unit(5,"points") ,
+    axis.title.y = element_text(size=15),
+    axis.text = element_text(color = "black", size=15)
+)
+p 
+ggsave(file = paste0(targetGeneName,"_WKEX-22-2.svg"), plot = p, width = 5, height = 4)
 
 ## Stats
 # Label inliers
@@ -128,8 +171,8 @@ analysis = expression %>%
 analysis = analysis[is.na(analysis$inlier)==F,] #remove outliers
 
 # label each row with the number of reps
-temp = summary(analysis)
-temp = as.data.frame(t(data.frame(strsplit(temp[,"type"], split = ":", fixed = T))))
+temp = summary.data.frame(analysis, maxsum = 10)
+temp = as.data.frame(t(data.frame(strsplit(temp[,"      type"], split = ":", fixed = T))))
 temp = setNames(as.integer(temp[, 2]),temp[,1])
 analysis = cbind(analysis,reps =temp[analysis$type])
 rm(temp)
@@ -217,6 +260,8 @@ theme(
     axis.title.y = element_text(size=15),
     axis.text = element_text(color = "black", size=15)
 )
+
+
 p 
 ggsave(file = paste0(targetGeneName,"_WKEX-22-1-log.svg"), plot = p, width = 5, height = 4)
 #__________absolute quatitation_________________

@@ -36,19 +36,23 @@ library(ggrepel)
 
 #Additional PCA components
 for_pca <- rlog( allData, blind = T )
-rv <- rowVars(assay(for_pca))
+sel_pca = for_pca[,sub_24]
+rv <- rowVars(assay(sel_pca))
+
+
+
 # select the ntop genes by variance (across treatment groups)
-ntop = 10000
+ntop = 1000
 select <- order(rv, decreasing=TRUE)[seq_len(min(ntop, length(rv)))]
 
 # perform a PCA on the data in assay(x) for the selected genes
-pca <- prcomp(t(assay(for_pca)[select,]))
+pca <- prcomp(t(assay(sel_pca)[select,]))
 percentVar <- pca$sdev^2/sum(pca$sdev^2)
-intgroup_df <- as.data.frame(colData(allData)[, "group", drop = FALSE])
+intgroup_df <- as.data.frame(colData(sel_pca)[, "group", drop = FALSE])
 group <- if (length("group") > 1) {
   factor(apply(intgroup_df, 1, paste, collapse = " : "))
 } else{
-  colData(allData)[["group"]]
+  colData(sel_pca)[["group"]]
 }
 
 #Selecting the principle components
@@ -56,9 +60,9 @@ pc_x = 1
 pc_y = 2
 d <- data.frame(PC1 = pca$x[, pc_x], PC2 = pca$x[, pc_y], 
                 group = intgroup_df, 
-                age = colData(for_pca)[,1],
-                inf = colData(for_pca)[,2],
-                hpi = colData(for_pca)[,3]#,
+                age = colData(sel_pca)[,1],
+                inf = colData(sel_pca)[,2]#,
+                #hpi = colData(sel_pca)[,3]#,
                 #ageinf = as.integer(as.factor(paste0(d$age,d$)))
      ) #In pca$x[,]
 temp = as.integer(as.factor(paste0(d$inf,d$hpi)))
@@ -70,15 +74,16 @@ temp = lapply(temp, function(x){tmp = if (x>2){
   return(tmp)
 })
 temp =unlist(temp)
-
+temp = c(1,1,1,16,16,16,0,0,0,15,15,15)
 
 
 #Drawing the PCA plot and demonstrating variance
 
  #prints to tiff
 
-ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = "hpi")) + geom_point(size = 4,shape =temp, stroke = 1.5) +  xlab(paste0("PC ",pc_x," (", round(percentVar[pc_x] * 100), "% variance)")) + ylab(paste0("PC ",pc_y," (", round(percentVar[pc_y] * 100), "% variance)")) + 
-    coord_fixed() +theme(panel.grid.major = element_blank(), 
+p = ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = "age"), ) + geom_point(size = 4,shape =temp, stroke = 1.5) +  xlab(paste0("PC ",pc_x," (", round(percentVar[pc_x] * 100), "% variance)")) + ylab(paste0("PC ",pc_y," (", round(percentVar[pc_y] * 100), "% variance)")) + 
+    #coord_fixed() +
+  theme(panel.grid.major = element_blank(), 
     panel.grid.minor = element_blank(),
     panel.background = element_blank(), 
     axis.line = element_line(colour = "black", size=1),
@@ -87,10 +92,11 @@ ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = "hpi")) + geom_point(s
     axis.ticks=element_line(colour = "black", size =1),
     axis.ticks.length = unit(5,"points") ,
     axis.title.y = element_text(size=15),
-    legend.position = "right",
+    legend.position = "none",
     axis.text = element_text(size=15),
-)
-
+) + scale_color_manual(values = c("#0993AE", "#54B031" ))
+p
+ggsave(file = "24hpi.svg", plot = p, width = 5, height = 4)
 
 
 as.factor(paste0(d$inf,d$age, d$hpi))

@@ -39,23 +39,27 @@ refGeneName = "SEC5A"
 
 ## Graph for graphing 3 factor data of young and mature samples
 qpcr3FGraph = function(data, targetGeneName, refGeneName, exptID = "exptID", colours = c("red", "green", "blue"), width = 8, height = 6, graph = F){
-  data = data %>%  mutate(target = 2^(-(get(targetGeneName)-get(refGeneName))), sampGroup = paste(age, treatment, hpi, sep = "_"), .keep = "all")
+  data = data %>%  mutate( sampGroup = paste(age, treatment, hpi, sep = "_"), .keep = "all") %>% mutate(target = 2^(-(get(targetGeneName)-get(refGeneName))))
   print(data)
   anovaModel = aov(log2(target) ~ sampGroup, data = data)
   print(HSD.test(anovaModel, alpha=0.05, "sampGroup", console=F)$groups)
   
   p = data %>% group_by(sampGroup) %>% 
+    #mutate(target = log10(target)) %>%
     mutate(inlier = ifelse(is_outlier(target), as.numeric(NA), target), outlier = ifelse(is_outlier(target), target, as.numeric(NA)) ) %>%
     ggplot(., aes(x=hpi:treatment, y=inlier, fill = treatment)) +
     stat_summary(fun = mean, geom = "bar", position = position_dodge(width = 1), colour = "#000000", size = 0.75) +
     geom_jitter( size=2, alpha = 0.5, position = position_jitterdodge(dodge.width = 1, jitter.width = 0.8)) + facet_grid(.~age, labeller = labeller(age = c(Y = "Young", M = "Mature"))) +
     stat_summary(fun = mean,
-                 fun.min = function(x) {ifelse(mean(x) - sd(x)>0,mean(x) - sd(x),0 )}, 
+                 fun.min = function(x) {ifelse(mean(x) - sd(x)>0, 
+                                               mean(x) - sd(x)
+                                               , 0 )
+                   }, 
                  fun.max = function(x) {mean(x) + sd(x)}, 
                  geom = "errorbar", lty =1 , size =0.75, width = 0.25, colour = "#000000", position = position_dodge(width = 1)) +
     scale_y_continuous(expand = expansion(c(0, 0.1)))+
     theme(
-      legend.position="right",
+      legend.position="none",
       plot.title = element_text(size=11),
       axis.text.x =  element_blank()
     ) + ylab(paste0(targetGeneName,"/", refGeneName)) + xlab("") +
@@ -63,15 +67,17 @@ qpcr3FGraph = function(data, targetGeneName, refGeneName, exptID = "exptID", col
           panel.grid.minor = element_blank(),
           panel.background = element_blank(), 
           panel.border = element_rect(colour = "black", fill = NA, size = 1),
-          strip.text.x = element_text(size = 15),
-          strip.background = element_rect(colour = "black", fill = "#FFFFFF", size = 1),
+          #strip.text.x = element_text(size = 15),
+          #strip.background = element_rect(colour = "black", fill = "#FFFFFF", size = 1),
           axis.line = element_line(colour = "black", size=0),
           axis.title.x=element_text(size=15),
           #axis.text.x=element_blank()),
           axis.ticks=element_line(colour = "black", size =1),
           axis.ticks.length = unit(5,"points") ,
           axis.title.y = element_text(size=15),
-          axis.text = element_text(color = "black", size=15)) +
+          axis.text = element_text(color = "black", size=15),
+          strip.background.x = element_blank(),
+          strip.text.x = element_blank()) +
     scale_fill_manual(values = colours)
   # + theme_few()
   if(graph ==T){
@@ -81,7 +87,7 @@ qpcr3FGraph = function(data, targetGeneName, refGeneName, exptID = "exptID", col
   }
 }
 
-qpcr3FGraph(df.graph, targetGeneName = "FMO1", refGeneName = "CUL4",exptID = "ARR-CSR-21-2", colours = c("#54B031", "#0993AE" , "#F6A63C"), graph = T)
+qpcr3FGraph(df.graph, targetGeneName = "ALD1", refGeneName = "SEC5A",exptID = "ARR-CSR-21-2", height = 6, width = 7, colours = c("#54B031", "#0993AE" , "#F6A63C"), graph = T)
 
 qpcrCtGraph = function(data, targetGeneName, exptID = "exptID", colours = c("red", "green", "blue"), width = 8, height = 6, graph = F){
   data = data %>%  mutate(target = get(targetGeneName), sampGroup = paste(age, treatment, hpi, sep = "_"), .keep = "all")

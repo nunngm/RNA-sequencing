@@ -81,23 +81,26 @@ mydata %>%
     axis.text = element_text(color = "black", size=15)
 )
 
-YMBQGraph = function(data, ageCol = c("#595959","#FFFFFF"), expCol = NA, graph = F, width = 5, height = 4, exptID = "temp"){
+YMBQGraph = function(data, ageCol = c("#595959","#FFFFFF"), expCol = NA, graph = F, width = 5, height = 4, exptID = "temp", box = F){
   data = data %>% mutate(sampGroup = paste(age, genotype, sep = "_"), cfu = log10(cfu), .keep = "all")
   if(is.na(expCol)){expCol = as.integer(as.factor(mydata$experiment))}
+  
   faces = c("plain", rep("italic", times = length(levels(data$genotype))-1))
   print(data)
   anovaModel = aov(cfu ~ sampGroup, data = data)
   print(data %>%group_by(genotype,age)%>% summarise(cfu = mean(cfu)) %>% summarise(foldDiff = 10^(cfu[age == 'Y'] - cfu[age == 'M'])))
   print(HSD.test(anovaModel, alpha=0.05, "sampGroup", console=F)$groups)
-
   
-  p = ggplot(data, aes(x=genotype, y=cfu, group = age, fill = age )) +
-    stat_summary(fun = mean, position = position_dodge(width = 1), geom = "bar", colour = "#000000", size = 0.75) +
-    stat_summary(fun = mean,
-                 fun.min = function(x) {mean(x) - sd(x)}, 
-                 fun.max = function(x) {mean(x) + sd(x)}, 
-                 geom = "errorbar", lty =1 , size =0.75, width = 0.25, colour = "#000000", position = position_dodge(width = 1)) +
-    geom_jitter( color= expCol,
+  p = ggplot(data, aes(x=genotype, y=cfu, fill = age ))
+  if(box == T ){
+    p = p +geom_boxplot(position = position_dodge(width = 0.9), width = 0.8, size = 0.75)}else{
+    p = p + stat_summary(fun = mean, position = position_dodge(width = 0.9), geom = "bar", colour = "#000000", size = 0.75, width = 0.8) +
+      stat_summary(fun = mean,
+                   fun.min = function(x) {mean(x) - sd(x)},
+                   fun.max = function(x) {mean(x) + sd(x)},
+                   geom = "errorbar", lty =1 , size =0.75, width = 0.25, colour = "#000000", position = position_dodge(width = 0.9))
+    }
+  p = p + geom_jitter( color= expCol,
                  size=2, alpha=0.5, position = position_jitterdodge(dodge.width = 1)) + coord_cartesian(ylim = c(4,8)) +    theme(
                    legend.position="none",
                    plot.title = element_text(size=11)
@@ -134,56 +137,5 @@ mydata$genotype = factor(mydata$genotype, levels = c("Col-0", "npr1-1",  "npr4-4
 mydata$age = factor(mydata$age, levels = c("Y", "M"))
 mydata$experiment = as.factor(mydata$experiment)
 mydata$cfu = as.numeric(mydata$cfu)
-YMBQGraph(mydata, exptID = "ARR-NPR-22", graph = F)
-
-barLabs = c("Col-0", expression(italic("bak1-5")), expression(italic("bkk1-1")), expression(italic("bak1-5\nbkk1-1")))
-
-
-
-mydata = cbind(mydata$experiment, 
-               t(as.data.frame(lapply(mydata$genotype, function(x){strsplit(as.character(x), split = "_")}))),
-               mydata$measurement
-)
-colnames(mydata) = c("experiment", "age", "genotype", "measurement")
-mydata = as.data.frame(mydata)
-mydata$age = factor(mydata$age, levels = c("Y", "M"))
-mydata$genotype = factor(mydata$genotype, levels = c("Col", "bak1.5", "bkk1.1", "b1b1"))
-mydata$measurement = as.numeric(mydata$measurement)
-
-barLabs = c("Col-0", expression(italic("bak1-5")), expression(italic("bkk1-1")), expression(italic("bak1-5\nbkk1-1")))
-dev.off()
-svg(filename = "CSR-21-summary.svg", width = 5, height = 4)
-mydata %>% 
-  mutate(mydata, genotype = as.numeric(factor(genotype, levels = c("Col", "bak1.5", "bkk1.1", "b1b1"))), .keep = "unused") %>%
-  ggplot( aes(x=genotype, y=measurement, group = age, fill = age )) +
-  stat_summary(fun = mean, position = position_dodge(width = 1), geom = "bar", colour = "#000000", size = 0.75) +
-  stat_summary(fun = mean,
-               fun.min = function(x) {mean(x) - sd(x)}, 
-               fun.max = function(x) {mean(x) + sd(x)}, 
-               geom = "errorbar", lty =1 , size =0.75, width = 0.25, colour = "#000000", position = position_dodge(width = 1)) +
-  geom_jitter( color=as.integer(as.factor(mydata$experiment)),
-               size=2, alpha=0.5, position = position_jitterdodge(dodge.width = 1)) + coord_cartesian(ylim = c(4,7.5)) +    theme(
-                 legend.position="none",
-                 plot.title = element_text(size=11)
-               ) + 
-  scale_y_continuous(breaks=c(4, 5, 6, 7), 
-                     labels = expression(10^4, 10^5, 10^6, 10^7),
-                     expand = c(0, 0)) + scale_x_continuous(guide = "axis_minor", breaks = c(1:4), labels = barLabs, minor_breaks = c(0.5:4.5))  +
-  scale_fill_manual(values = c("#595959","#FFFFFF")) +
-  xlab("Genotype") + ylab(bquote('Bacterial level (CFU leaf disc'^-1*')')) + theme(panel.grid.major = element_blank(), 
-                                         panel.grid.minor = element_blank(),
-                                         panel.background = element_blank(), 
-                                         axis.line = element_line(colour = "black", size=1),
-                                         axis.title.x=element_text(size=15),
-                                         #axis.text.x=element_blank()),
-                                         axis.ticks.y=element_line(colour = "black", size =1),
-                                         axis.ticks.length.y = unit(5, "points"),
-                                         axis.ticks.length.x = unit(1, "points"),
-                                         axis.ticks.x=element_line(colour = "black", size = 1),
-                                         ggh4x.axis.ticks.length.minor = rel(5),
-                                         axis.ticks.length = unit(5,"points") ,
-                                         axis.title.y = element_text(size=15),
-                                         axis.text = element_text(color = "black", size=15)
-)
-dev.off()
+YMBQGraph(mydata, exptID = "ARR-NPR-22", graph = F, box = T)
 

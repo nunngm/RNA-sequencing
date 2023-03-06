@@ -33,12 +33,14 @@ is_outlier <- function(x) {
   return(x < quantile(x, 0.25, na.rm = T) - 1.5 * IQR(x, na.rm=T) | x > quantile(x, 0.75, na.rm = T) + 1.5 * IQR(x,na.rm = T))
 }
 
-targetGeneName = "ALD1"
+targetGeneName = "FMO1"
 refGeneName = "SEC5A"
-
+data = df.graph %>%  mutate( sampGroup = paste(age, treatment, hpi, sep = "_"), .keep = "all") %>% mutate(target = 2^(-(get(targetGeneName)-get(refGeneName))))
+anovaModel = aov(log2(target) ~ sampGroup, data = data[data$age=="M",])
+print(HSD.test(anovaModel, alpha=0.05, "sampGroup", console=F)$groups)
 
 ## Graph for graphing 3 factor data of young and mature samples
-qpcr3FGraph = function(data, targetGeneName, refGeneName, exptID = "exptID", colours = c("red", "green", "blue"), width = 8, height = 6, graph = F){
+qpcr3FGraph = function(data, targetGeneName, refGeneName, exptID = "temp", colours = c("red", "green", "blue"), width = 8, height = 6, graph = F){
   data = data %>%  mutate( sampGroup = paste(age, treatment, hpi, sep = "_"), .keep = "all") %>% mutate(target = 2^(-(get(targetGeneName)-get(refGeneName))))
   print(data)
   anovaModel = aov(log2(target) ~ sampGroup, data = data)
@@ -46,10 +48,12 @@ qpcr3FGraph = function(data, targetGeneName, refGeneName, exptID = "exptID", col
   
   p = data %>% group_by(sampGroup) %>% 
     #mutate(target = log10(target)) %>%
-    mutate(inlier = ifelse(is_outlier(target), as.numeric(NA), target), outlier = ifelse(is_outlier(target), target, as.numeric(NA)) ) %>%
+    #mutate(inlier = ifelse(is_outlier(target), as.numeric(NA), target), outlier = ifelse(is_outlier(target), target, as.numeric(NA)) ) %>% 
+    mutate(inlier = target) %>% 
     ggplot(., aes(x=hpi:treatment, y=inlier, fill = treatment)) +
     stat_summary(fun = mean, geom = "bar", position = position_dodge(width = 1), colour = "#000000", size = 0.75) +
-    geom_jitter( size=2, alpha = 0.5, position = position_jitterdodge(dodge.width = 1, jitter.width = 0.8)) + facet_grid(.~age, labeller = labeller(age = c(Y = "Young", M = "Mature"))) +
+    geom_jitter( size=2,#colour = df.graph$rep, 
+                 alpha = 0.5, position = position_jitterdodge(dodge.width = 1, jitter.width = 0.8)) + facet_grid(.~age, labeller = labeller(age = c(Y = "Young", M = "Mature"))) +
     stat_summary(fun = mean,
                  fun.min = function(x) {ifelse(mean(x) - sd(x)>0, 
                                                mean(x) - sd(x)
@@ -81,13 +85,26 @@ qpcr3FGraph = function(data, targetGeneName, refGeneName, exptID = "exptID", col
     scale_fill_manual(values = colours)
   # + theme_few()
   if(graph ==T){
+    exptID = readline(prompt = "Enter experimentID:")
     ggsave(file = paste(targetGeneName, refGeneName, paste0(exptID, ".svg"), sep = "_"), plot = p, width = width, height = height)
   } else{
     p
   }
 }
 
-qpcr3FGraph(df.graph, targetGeneName = "ALD1", refGeneName = "SEC5A",exptID = "ARR-CSR-21-2", height = 6, width = 7, colours = c("#54B031", "#0993AE" , "#F6A63C"), graph = T)
+qpcr3FGraph(df.graph, targetGeneName = "ALD1", refGeneName = "SEC5A",exptID = "ARR-PIP-22-1", height = 6, width = 7, colours = c("#54B031", "#0993AE" , "#F6A63C"), graph = F)
+
+
+targetGeneName = "ALD1"
+refGeneName = "CUL4"
+qpcr3FGraph(df.graph, targetGeneName = targetGeneName, refGeneName = refGeneName,exptID = "ARR-PIP-22-1", height = 6, width = 7, colours = c("#54B031", "#0993AE" , "#F6A63C"), graph = F)
+data = df.graph %>%  mutate( sampGroup = paste(age, treatment, hpi, sep = "_"), .keep = "all") %>% mutate(target = 2^(-(get(targetGeneName)-get(refGeneName))))
+anovaModel = aov(log2(target) ~ sampGroup, data = data[data$age=="M",])
+HSD.test(anovaModel, alpha=0.05, "sampGroup", console=F)$groups
+anovaModel = aov(log2(target) ~ sampGroup, data = data)
+temp = HSD.test(anovaModel, alpha=0.05, "sampGroup", console=F)$groups
+temp[,1] = 2^temp[,1]
+temp
 
 qpcrCtGraph = function(data, targetGeneName, exptID = "exptID", colours = c("red", "green", "blue"), width = 8, height = 6, graph = F){
   data = data %>%  mutate(target = get(targetGeneName), sampGroup = paste(age, treatment, hpi, sep = "_"), .keep = "all")
@@ -132,7 +149,7 @@ qpcrCtGraph = function(data, targetGeneName, exptID = "exptID", colours = c("red
   }
 }
 
-qpcrCtGraph(df.graph, targetGeneName = "SEC5A", exptID = "ARR-CSR-21-2", colours = c("#54B031", "#0993AE" , "#F6A63C"), graph = F)
+qpcrCtGraph(df.graph, targetGeneName = "ALD1", exptID = "ARR-PIP-22-1", colours = c("#54B031", "#0993AE" , "#F6A63C"), graph = T)
 
 
 # Moving on to weekly expression graphs

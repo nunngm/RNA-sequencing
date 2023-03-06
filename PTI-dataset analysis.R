@@ -21,6 +21,7 @@ set.seed(31138)
 
 #laptop directory
 setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Proj-PTI RNA-seq\\Exp-R workshop")
+setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-PTI RNA-seq\\Exp-R workshop")
 #Desktop directory
 setwd("C:\\Users\\garrett\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Proj-PTI RNA-seq\\Exp-R workshop")
 
@@ -169,3 +170,5 @@ ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = "treatment")) + geom_p
                                                                                                                                                                                       axis.text = element_text(size= 75),
 )
 dev.off()
+
+view.pti.gene = function()

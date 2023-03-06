@@ -6,6 +6,7 @@ library(tidyr)
 library(ggplot2)
 library(ggh4x)
 library(grDevices)
+library(agricolae)
 
 #laptop directory
 setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-R workshop")
@@ -93,7 +94,8 @@ YMBQGraph = function(data, ageCol = c("#595959","#FFFFFF"), expCol = NA, graph =
   
   p = ggplot(data, aes(x=genotype, y=cfu, fill = age ))
   if(box == T ){
-    p = p +geom_boxplot(position = position_dodge(width = 0.9), width = 0.8, size = 0.75)}else{
+    p = p +geom_boxplot(position = position_dodge(width = 0.9), width = 0.8, size = 0.75)
+    }else{
     p = p + stat_summary(fun = mean, position = position_dodge(width = 0.9), geom = "bar", colour = "#000000", size = 0.75, width = 0.8) +
       stat_summary(fun = mean,
                    fun.min = function(x) {mean(x) - sd(x)},
@@ -137,5 +139,5 @@ mydata$genotype = factor(mydata$genotype, levels = c("Col-0", "npr1-1",  "npr4-4
 mydata$age = factor(mydata$age, levels = c("Y", "M"))
 mydata$experiment = as.factor(mydata$experiment)
 mydata$cfu = as.numeric(mydata$cfu)
-YMBQGraph(mydata, exptID = "ARR-NPR-22", graph = F, box = T)
+YMBQGraph(mydata, exptID = "ARR-NPR-22", graph = T, box = F, width = 7, height = 5)
 

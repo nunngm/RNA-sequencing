@@ -3,7 +3,7 @@
 # Optical calibration factor (FU/ng dsDNA) for our kit (Biorad Universal SYBR green) = 957 FU/ng dsDNA
 # F0 = calculated initial fluorescence, M0 = calculated initial mass of target double-stranded cDNA, N0 number of initial transcripts, OCF = optical calibration factor, As = amplicon size
 # The N0 is scaled by amplicon size irrespective of GC content
-amplicon_sizes =c(ALD1 = 105,FMO1 = 124, SEC5A = 93, CUL4 = 106,ACTIN1 = 169, UGT76B1 = 121,SARD1 = 139, CBP60G = 101, FLS2 = 112, ICS1 = 154, SOC1 = 136, SVP = 122, UGT74F1 = 116, PR1 = 89, RLP28 = 119)
+amplicon_sizes =c(ALD1 = 105,FMO1 = 124, SEC5A = 93, CUL4 = 106,ACTIN1 = 169, UGT76B1 = 121,SARD1 = 139, CBP60G = 101, FLS2 = 112, ICS1 = 154, SOC1 = 136, SVP = 122, UGT74F1 = 116, PR1 = 89, RLP28 = 119, PCR1 = 147,NPR1 = 141, RLP23 = 122)
 
 library(qpcR)
 library(tidyr)
@@ -29,15 +29,17 @@ setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\
 #Desktop directory
 setwd("C:\\Users\\garrett\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-qRT-PCR\\Primer Efficiency test")
 
-
-curves = lapply(2:ncol(mydata), function(x){
+## set baseline threshold
+sub_highEx = cbind(mydata[,1], mydata[,mydata[41,]>800]) #subset the data into just wells that significantly amplified
+curves = lapply(2:ncol(sub_highEx), function(x){
     print(x)
-     pcrfit(mydata, cyc = 1, fluo = x)})
-## Determine the average threshold cycle
-E = data.frame(t(sapply(1:(ncol(mydata)-1), simplify = "array", function(x){efficiency(curves[[x]], type = "cpD2")})))
-unlist(E$eff)/2 #
-Ft = mean(unlist(E$fluo[E$fluo>100])) ##Might error out do to wells that don't amplify
-selSamples = mydata[40,2:ncol(mydata)]>Ft
+     pcrfit(sub_highEx, cyc = 1, fluo = x)}) #generate curves based on your subsetted data
+E = data.frame(t(sapply(1:(ncol(sub_highEx)-1), simplify = "array", function(x){efficiency(curves[[x]], type = "cpD2")}))) #Does a bunch of things but defines the threshold cycle as when the slope of the curve is increasing (2nd derivative) the fastest. From this you can just grab the fluorescence at that threshold value.
+# You can check efficiencies here by looking at E$eff
+Ft = mean(as.numeric(E$fluo)) # take all the curves which amplified well and find the mean fluorescence at the threshold cycle and use that as the baseline threshold
+
+#Actual qPCR analysis now.
+selSamples = mydata[40,2:ncol(mydata)]>Ft # Which samples amplified above the baseline threshold
 badSamps = groups[!selSamples,]
 groups = groups[selSamples,]
 mydata = mydata[,c(T, selSamples)]
@@ -68,7 +70,7 @@ for (i in 1:nrow(df)){
 }
 df.wide = as.data.frame(mat)
 
-write.table(df.wide, "clipboard", sep = "\t", row.names = F)
+write.table(df.wide, "clipboard", sep = "\t", row.names = T)
 
 #-----------Differential expression analysis ----------------------------
 refGeneExp = setNames(df.wide[[refGeneName]], rownames(df.wide)) #Change this to enter your reference gene expression (if from another plate that worked well you will be able to compare to the whole plate)

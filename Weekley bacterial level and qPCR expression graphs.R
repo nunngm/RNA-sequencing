@@ -69,6 +69,7 @@ weeklyBacterialLevel = function(data, labels = NULL, exptID = "exptID", colours 
           axis.title.y = element_text(size=15),
           axis.text = element_text(color = "black", size=20)) +
     scale_fill_manual(values = colours)
+  
   # + theme_few()
   if(graph ==T){
     ggsave(file = paste(exptID, "cfu.svg", sep = "_"), plot = p, width = width, height = height)
@@ -80,7 +81,7 @@ weeklyBacterialLevel = function(data, labels = NULL, exptID = "exptID", colours 
 weeklyBacterialLevel(data = df.graph, labels = c(3,4,5,6), exptID = "WKEX-22-3", colours = pal(4), graph = T)
 
 ## weekly qPCR data
-weeklyQPCR = function(data, targetGeneName, refGeneName, labels = NULL, exptID = "exptID", colours = c("yellow","red", "green", "blue"), width = 5, height = 4, graph = F){
+weeklyQPCR = function(data, targetGeneName, scale = c(0,NA), refGeneName, labels = NULL, exptID = "exptID", colours = c("yellow","red", "green", "blue"), width = 5, height = 4, graph = F){
   data = data %>%  mutate(target = 2^(-(get(targetGeneName)-get(refGeneName))), .keep = "all")
   print(data)
   anovaModel = aov(log2(target) ~ age, data = data)
@@ -95,7 +96,7 @@ weeklyQPCR = function(data, targetGeneName, refGeneName, labels = NULL, exptID =
                  fun.max = function(x) {mean(x) + sd(x)}, 
                  geom = "errorbar", lty =1 , size =0.75, width = 0.25, colour = "#000000", position = position_dodge(width = 1)) +
        geom_point(aes(x = age, y = outlier), size =2, alpha = 1, shape = 17, colour = "#000000") +
-    scale_y_continuous(expand = expansion(c(0, 0.1))) +
+    scale_y_continuous(limits = scale, expand = expansion(c(0, 0.1))) +
     scale_x_discrete( labels = labels) +
     theme(
       legend.position="none",
@@ -115,6 +116,7 @@ weeklyQPCR = function(data, targetGeneName, refGeneName, labels = NULL, exptID =
           axis.title.y = element_text(size=15),
           axis.text = element_text(color = "black", size=20)) +
     scale_fill_manual(values = colours)
+  
   # + theme_few()
   if(graph ==T){
     ggsave(file = paste(exptID, targetGeneName, refGeneName, "qPCR.svg", sep = "_"), plot = p, width = width, height = height)
@@ -123,5 +125,5 @@ weeklyQPCR = function(data, targetGeneName, refGeneName, labels = NULL, exptID =
   }
 }
 
-weeklyQPCR(data = df.graph, targetGeneName = "UGT76B1", refGeneName = "CUL4", labels = c(3,4,5,6), colours = pal(4), exptID = "WKEX-22-3" , graph = T)
+weeklyQPCR(data = df.graph, scale = c(0,0.16), targetGeneName = "FMO1", refGeneName = "SEC5A", labels = c(3,4,5,6), colours = pal(4), exptID = "WKEX-23-2-scaled" , graph = T)
 # outlier calculation

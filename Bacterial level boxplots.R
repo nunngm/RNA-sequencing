@@ -84,7 +84,7 @@ mydata %>%
 
 YMBQGraph = function(data, ageCol = c("#595959","#FFFFFF"), expCol = NA, graph = F, width = 5, height = 4, exptID = "temp", box = F){
   data = data %>% mutate(sampGroup = paste(age, genotype, sep = "_"), cfu = log10(cfu), .keep = "all")
-  if(is.na(expCol)){expCol = as.integer(as.factor(mydata$experiment))}
+  if(is.na(expCol)){expCol = as.integer(as.factor(data$experiment))}
   
   faces = c("plain", rep("italic", times = length(levels(data$genotype))-1))
   print(data)
@@ -139,5 +139,5 @@ mydata$genotype = factor(mydata$genotype, levels = c("Col-0", "npr1-1",  "npr4-4
 mydata$age = factor(mydata$age, levels = c("Y", "M"))
 mydata$experiment = as.factor(mydata$experiment)
 mydata$cfu = as.numeric(mydata$cfu)
-YMBQGraph(mydata, exptID = "ARR-NPR-22", graph = T, box = F, width = 7, height = 5)
+YMBQGraph(temp, exptID = "ARR-CSR-22", graph = F, box = F, width = 7, height = 5)
 

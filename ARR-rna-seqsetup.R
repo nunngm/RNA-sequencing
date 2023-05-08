@@ -264,17 +264,17 @@ view.gene = function(accession, fileName = objectSymbol[toupper(accession)], gra
          panel.grid.minor = element_blank(),
          panel.background = element_blank(), 
          axis.line = element_line(colour = "black", size=1),
-         axis.title.x=element_text(size=15),
+         axis.title.x=element_text(size=10),
          #axis.text.x=element_blank()),
          axis.ticks=element_line(colour = "black", size =1),
          axis.ticks.length = unit(5,"points") ,
-         axis.title.y = element_text(size=15),
+         axis.title.y = element_text(size=10),
          legend.position = "right",
-         axis.text = element_text(size=15),
-         legend.text = element_text(size=15)
+         axis.text = element_text(size=10),
+         legend.text = element_text(size=10)
           ) + ggtitle(fileName)
      if (graph == T){
-          ggsave(paste0(fileName, ".png"), plot = p)
+          ggsave(paste0(fileName, ".png"), plot = p, width = 8, height = 6)
           
           p
 

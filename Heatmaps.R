@@ -8,6 +8,7 @@ library(Rgraphviz)
 library(dplyr)
 library(ggplot2)
 library(colorspace)
+library(scales)
 library(ggrepel)
 library(NMF)
 library(GenAnalysis)
@@ -17,7 +18,73 @@ install.packages("devtools")
 library(devtools)
 install_github("nickytong/GenAnalysis")
 
+# Let's reorganize this mess
 
+## Colour palettes
+### scale-white-salmon colour palette
+hmcol1 = sequential_hcl(n = 10, h = 17, c = 117, l = c(64,100), power = 0.5, rev = T)
+show_col(hmcol1)
+hmcol2 = sequential_hcl(n = 10, h = 215, c = 41, l = c(46,100), power =0.5)
+show_col(hmcol2)
+hmcol = c(hmcol2[1:9], "#FFFFFF", hmcol1[2:10]) 
+show_col(hmcol)
+
+### Red-White-Blue colour palette
+hmcol1 = sequential_hcl(n = 10, h = 13, c = 177, l = c(54,100), power = 0.4, rev = T)
+show_col(hmcol1)
+hmcol2 = sequential_hcl(n = 10, h = 266, c = 131, l = c(33,100), power =0.4)
+show_col(hmcol2)
+hmcol = c(hmcol2[1:9], "#FFFFFF", hmcol1[2:10]) 
+show_col(hmcol)
+
+#Bring in genes you want an expression heatmap for
+mydata= read.table(file= "clipboard",sep= "\t",header =T)
+
+selectGeneHeatmap = function(genesOfInterest,filename, colours =c("#0000FF","#3230EF","#4442E7", "#5251E3","#605FE1","#6E6DE1","#7E7DE3","#9191E7","#ABABED","#FFFFFF","#FFACAB","#FF918F","#FF7D7A","#FF6C68","#FF5C57","#FF4D47","#FF3E35","#FF2D20","#FF0000"),
+                             padj = 0.05, width = 5, height =4, graph = F){
+  comp = lapply(levels(hpi), function(x){ #Picks makes the comparisons for y.pst, m.mock, m.pst compared to y.mock at each time point
+    list(results(allData, contrast = c("group", paste0("ypst", x), paste0("ymg", x)), alpha = padj, pAdjustMethod="BH", tidy = T), 
+         results(allData ,contrast = c("group", paste0("mmg", x), paste0("ymg", x)), alpha = padj, pAdjustMethod="BH", tidy = T), 
+         results(allData,contrast = c("group", paste0("mpst", x),paste0("ymg",x)), alpha = padj, pAdjustMethod="BH", tidy = T))
+  })
+
+  GOI.bool = comp[[1]][[1]]$row %in% genesOfInterest$accession #makes a list of T/F values that is just the genes of interest
+  # make a matrices of log2-fold changes and adjusted p-values
+  l2fc = cbind(comp[[1]][[1]]$log2FoldChange, comp[[1]][[2]]$log2FoldChange, comp[[1]][[3]]$log2FoldChange,
+                   comp[[2]][[1]]$log2FoldChange, comp[[2]][[2]]$log2FoldChange, comp[[2]][[3]]$log2FoldChange,
+                   comp[[3]][[1]]$log2FoldChange, comp[[3]][[2]]$log2FoldChange, comp[[3]][[3]]$log2FoldChange)
+  pvals = cbind(comp[[1]][[1]]$padj, comp[[1]][[2]]$padj, comp[[1]][[3]]$padj,
+                comp[[2]][[1]]$padj, comp[[2]][[2]]$padj, comp[[2]][[3]]$padj,
+                comp[[3]][[1]]$padj, comp[[3]][[2]]$padj, comp[[3]][[3]]$padj)
+  #Name the columns appropriately
+  colnames(l2fc) = c("Y.Pst", "M.Mock", "M.Pst","Y.Pst", "M.Mock", "M.Pst", "Y.Pst", "M.Mock", "M.Pst" )
+  colnames(pvals) = c("Y.Pst", "M.Mock", "M.Pst","Y.Pst", "M.Mock", "M.Pst", "Y.Pst", "M.Mock", "M.Pst")
+  
+  #subset to just genes of interest
+  l2fc = l2fc[ GOI.bool, ]
+  pvals = pvals[GOI.bool, ]
+  
+  #set the rownames appropriately (they have been reorganized by boolean selection)
+  rownames(l2fc) = comp[[1]][[1]]$row[GOI.bool]
+  rownames(pvals) = comp[[1]][[1]]$row[GOI.bool]
+  
+  #Rorder rows to be in order supplied in the genes of interest input
+  l2fc = l2fc[unlist2(lapply(genesOfInterest$accession, function(x){grep(x, rownames(l2fc))})), ] #have to reorder
+  
+  #Set boxes with an adjusted p-val <0.05 to 0 (no sig diff)
+  l2fc[pvals>0.05] = 0
+  if(graph ==T){
+    svg(filename = paste0(filename,".svg"),width = width, height = height)
+    aheatmap(l2fc, color = colours, border_color = "#888888", Rowv = NA, Colv = NA, distfun= "euclidean",hclustfun = "average", scale = "none", labRow = genesOfInterest$label, breaks =-0.33)
+    dev.off()
+  }else{
+    aheatmap(l2fc, color = pal(25), border_color = "#888888", Rowv = NA, Colv = NA, distfun= "euclidean",hclustfun = "average", scale = "none", labRow = genesOfInterest$label, breaks =-0.33)
+  }
+}
+
+
+
+pal = colorRampPalette(c("blue", "white", "red"))
 hmcol = hcl_palettes(palette = "Berlin") #Setting the colour palatte
 for_pca <- rlog(allData, blind=F)
 rlogMat <- assay(for_pca) # just making a matrix of the counts that have been corrected for over-dispersion in a "blind" fashion
@@ -59,6 +126,7 @@ genes_of_interest = unique(c( rownames(allComp$mpst0mmg0[allComp$mpst0mmg0$padj 
 mpstcomp = list(results(allData,contrast = c("group", "mpst0", "ymg0"), alpha = 0.05, pAdjustMethod="BH", tidy = T), results(allData,contrast = c("group", "mpst12", "ymg12"), alpha = 0.05, pAdjustMethod="BH", tidy = T), results(allData,contrast = c("group", "mpst24", "ymg24"), alpha = 0.05, pAdjustMethod="BH", tidy = T))
 
 GOI = rownames(allComp$ypst0ymg0) %in% genes_of_interest
+GOI = rownames(allComp$ypst0ymg0) %in% mydata$accsession
 
 finalLFC = cbind(allComp$ypst0ymg0[GOI, 2], allComp$mmg0ymg0[GOI,2], mpstcomp[[1]][GOI, 3], allComp$ypst12ymg12[GOI, 2], allComp$mmg12ymg12[GOI, 2], mpstcomp[[2]][GOI, 3], allComp$ypst24ymg24[GOI, 2], allComp$mmg24ymg24[GOI, 2], mpstcomp[[3]][GOI, 3])
 
@@ -93,13 +161,17 @@ heatmap_full <- ggplot(data = as.data.frame(finalLFC),
     labs(x="Ecotype and Condition", y="Clusters") +  theme_bw() + #theme(axis.text.y=element_blank(), plot.margin = margin(-0.75, 0, 0,0 , "cm")))
     theme(axis.text.y=element_text(angle=20,vjust=0.5), axis.text.x = element_text(angle = -30, vjust = 0.5, hjust = 0, size = 9) , plot.margin = margin(-0.75, 0, 0,0 , "cm"))
 heatmap_full
+
 mydata= read.table(file= "clipboard",sep= "\t",header =T)
-labels = setNames(mydata$label ,mydata$accession)
+labels = mydata$label
+names(labels) = mydata$accsession
 
 finalLFC = finalLFC[unlist2(lapply(names(labels), function(x){grep(x,rownames(finalLFC))})),]
+rownames(finalLFC) = 
+
 grep()
 tiff("rplot2.tiff", width = 4000, height = 2000)
-svg(filename = "ETI heatmap-redux.svg",width = 5, height = 4)
+svg(filename = "ETI heatmap-reduv2.svg",width = 5, height = 4)
 aheatmap(finalLFC, color = hmcol, border_color = "#888888", Rowv = NA, Colv = NA, distfun= "euclidean",hclustfun = "average", scale = "none", labRow = labels[rownames(finalLFC)], breaks =0)
 dev.off()
 

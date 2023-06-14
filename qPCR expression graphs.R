@@ -33,7 +33,7 @@ is_outlier <- function(x) {
   return(x < quantile(x, 0.25, na.rm = T) - 1.5 * IQR(x, na.rm=T) | x > quantile(x, 0.75, na.rm = T) + 1.5 * IQR(x,na.rm = T))
 }
 
-targetGeneName = "PCR1"
+targetGeneName = "ALD1"
 refGeneName = "SEC5A"
 data = df.graph %>%  mutate( sampGroup = paste(age, treatment, hpi, sep = "_"), .keep = "all") %>% mutate(target = 2^(-(get(targetGeneName)-get(refGeneName))))
 anovaModel = aov(log2(target) ~ sampGroup, data = data[data$age=="M",])
@@ -92,8 +92,9 @@ qpcr3FGraph = function(data, targetGeneName, refGeneName, exptID = "temp", colou
   }
 }
 
-qpcr3FGraph(df.graph, targetGeneName = "RLP28", refGeneName = "SEC5A",exptID = "ARR-PIP-22-1", height = 6, width = 7, colours = c("#54B031", "#0993AE" , "#F6A63C"), graph = T)
+qpcr3FGraph(df.graph, targetGeneName = "FMO1", refGeneName = "SEC5A",exptID = "ARR-PIP-22-1", height = 6, width = 7, colours = c("#54B031", "#0993AE" , "#F6A63C"), graph = F)
 
+qpcr3FGraph(df.graph, targetGeneName = "ALD1", refGeneName = "SEC5A",exptID = "ARR-PIP-22-1", height = 6, width = 7, colours = c("#378717", "#6DFDFD" , "#FFFF00"), graph = T)
 
 targetGeneName = "RLP28"
 refGeneName = "SEC5A"

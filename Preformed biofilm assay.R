@@ -4,6 +4,7 @@
 library(ggplot2)
 library(tidyverse)
 library(tidyr)
+library(dplyr)
 setwd("C:\\Users\\garre\\OneDrive\\Desktop\\stuff")
 
 #Read in the blanked plate data
@@ -29,7 +30,7 @@ rownames(df) = linData[,1]
 ### BIOFILM STAINING ANALYSIS
 df = df[df$har_type == "BS",] #remove any wells that were sacrificed or used for other purposes than biofilm staining
 
-toi = "0" #treatment of interest
+toi = "0.1" #treatment of interest
 graphData = df
 graphData = graphData[df$treatment == "UN"| df$treatment == toi, ]
 graphData$treat_time = paste(graphData$treat_time, graphData$treatment, sep = "_")
@@ -105,7 +106,7 @@ dev.off()
 graphData = graphData[graphData$treat_time != paste0("96_",toi) & graphData$har_time !=0,] #remove 96_untreated data
 barLabs = c("Untreated", "0","24", "48", "72")
 p = ggplot(graphData, aes(x = treat_time, y = biofilm, fill = har_time)) + 
-  stat_summary(aes(y = biofilm, group = har_time, fill = har_time), colour = "#000000", fun = mean, geom = 'bar', width = 0.75, size = 1, position = position_dodge(width = 0.75)) + 
+  stat_summary(aes(y = biofilm, group = har_time, fill = har_time), colour = "#000000", fun = mean, geom = 'bar', width = 0.75, size = 1, position = position_dodge2(width = 0.75, preserve = "single")) + 
   stat_summary( aes(y = biofilm, group = har_time), fun = mean,
                fun.min = function(x) {mean(x) - sd(x)}, 
                fun.max = function(x) {mean(x) + sd(x)}, 
@@ -127,8 +128,56 @@ p = ggplot(graphData, aes(x = treat_time, y = biofilm, fill = har_time)) +
   )
 p
 
+ToTGraph = function(data, treatmentOfInterest = 0, graphColours = c("#FFFC54","#FF9B71", "#E84855","#962B2B") , width = 7, height = 5, biofilm = T, barLabs = c("Untreated", "0","24", "48", "72"), graph = F){
+  
+  if (biofilm == T){
+    selectColumn = "biofilm"
+    lab.y = bquote('Biofilm formation (OD'[570]~')')
+  }else{
+    selectColumn = "growth"
+    lab.y = bquote('Bacterial growth (OD'[600]~')')
+  }
+  #take full data and pare down to just the required treatment and untreated
+  df.select = df[df$har_type == "BS",] #remove any wells that were sacrificed or used for other purposes than biofilm staining
+  df.select = df.select[df.select$treatment == "UN"| df.select$treatment == treatmentOfInterest, ]
+  df.select$treat_time = paste(df.select$treat_time, df.select$treatment, sep = "_")
+  df.select = df.select[df.select$treat_time != paste0("72_", treatmentOfInterest) | df.select$har_time !=96,]
+  df.select = df.select[df.select$har_time != 0,]
+  df.select$biofilm = as.numeric(df.select$biofilm)
+  df.select$growth = as.numeric(df.select$growth)
+  df.select$treat_time = factor(df.select$treat_time, levels = c("0_UN", paste0("0_", treatmentOfInterest), paste0("24_", treatmentOfInterest),paste0("48_", treatmentOfInterest), paste0("72_", treatmentOfInterest), paste0("96_", treatmentOfInterest) ))
+  
+  #Summarise data
+  df.summary = df.select %>% group_by(treat_time, har_time) %>% summarise(mean = mean(get(selectColumn)), sd = sd(get(selectColumn)))
+  
+  p = ggplot(df.select, aes(x = treat_time, y = get(selectColumn), fill = har_time)) + 
+    geom_bar(mapping = aes(x = treat_time, y = mean, fill = har_time), data = df.summary, stat = "identity", position = position_dodge2(width = 0.75,preserve = "total")) +
+    geom_errorbar(mapping = aes(x = treat_time,y = mean, ymin = mean-sd, ymax = mean+sd), data = df.summary, size = 0.5, position = position_dodge2(width = 0.75, padding = 0.65, preserve = "total")) +
+    geom_point(alpha = 0.4, size = 2, stat = "identity", position = position_jitterdodge(dodge.width = 0.9, jitter.width = 0.1)) +
+    xlab("Time of treatment (hpi)") + scale_y_continuous(limits = c(0,3.2), expand = c(0,0)) + ylab(lab.y) + 
+    scale_x_discrete(labels = barLabs) + scale_fill_manual(values = graphColours)+
+    #ylim(NA,3.2)  +
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(), 
+          axis.line = element_line(colour = "black", size=1),
+          #axis.title.x=element_text(size=15),
+          axis.title.x = element_blank(),
+          #axis.text.x=element_blank()),
+          axis.ticks=element_line(colour = "black", size =1),
+          axis.ticks.length = unit(5,"points") ,
+          axis.title.y = element_text(size=15),
+          axis.text = element_text(colour = "black", size=15)
+    )
+  if(graph ==T){
+    exptID = readline(prompt = "Enter the experiment ID: ")
+    ggsave(file = paste(selectColumn, treatmentOfInterest, paste0(exptID, ".svg"), sep = "_"), plot = p, width = width, height = height)
+  } else{
+    p
+  }
+}
 ## OG format of this data
-toi = "0" #treatment time of interest
+toi = "0.1" #treatment time of interest
 graphData = df
 graphData = graphData[df$treat_time == "0" & df$treatment != "UN", ]
 graphData$biofilm = as.numeric(graphData$biofilm)
@@ -158,3 +207,54 @@ p = ggplot(graphData, aes(x = har_time, y = biofilm, fill = treatment)) +
         axis.text = element_text(colour = "black", size=30)
   )
 p
+
+PBABarGraph = function(data, selectTreatments = c("0","0.05","0.1","1"), selectTreatTimes = c("0", "24", "48", "72"), 
+                       barLabs = c("24", "48", "72", "96", "48", "72", "96", "72", "96", "96"),
+                       graphColours = c("#FFFC54","#FF9B71", "#E84855","#962B2B"), width = 12, height = 5, biofilm = T, 
+                       graph = F, ylim = c(0,NA)){
+  if (biofilm == T){
+    selectColumn = "biofilm"
+    lab.y = bquote('Biofilm formation (OD'[570]~')')
+  }else{
+    selectColumn = "growth"
+    lab.y = bquote('Bacterial growth (OD'[600]~')')
+  }
+  #take full data and pare down to just the required treatment and untreated
+  df.select = data[data$har_type == "BS",] #remove any wells that were sacrificed or used for other purposes than biofilm staining
+  df.select = df.select[as.logical(rowSums(as.data.frame(lapply(selectTreatments, function(x){df.select$treatment == x})))),]
+  df.select = df.select[as.logical(rowSums(as.data.frame(lapply(selectTreatTimes, function(x){df.select$treat_time == x})))),]
+  df.select$har_type = paste(df.select$treat_time, df.select$har_time, sep = "_")
+  df.select$har_type = as.factor(df.select$har_type)
+  df.select$biofilm = as.numeric(df.select$biofilm)
+  df.select$growth = as.numeric(df.select$growth)
+  
+  p = ggplot(df.select, aes(x = har_type, y = get(selectColumn), fill = treatment, group = treatment)) + 
+    stat_summary(aes(group = treatment), colour = "#000000", fun = mean, geom = 'bar', width = 0.75, size = 1, position = position_dodge(width = 0.75)) + 
+    stat_summary( aes(y = biofilm, group = treatment), fun = mean,
+                  fun.min = function(x) {mean(x) - sd(x)}, 
+                  fun.max = function(x) {mean(x) + sd(x)}, 
+                  geom = "errorbar", lty =1 , size =0.75, width = 0.25, position = position_dodge(width = 0.75)) +
+    geom_jitter( alpha = 0.4, size = 2, position = position_jitterdodge(jitter.width = 0.1, dodge.width = 0.75)) +
+    xlab("Time (hpi)") +   scale_y_continuous(limits = ylim, expand = c(0,0)) + ylab(lab.y) +  scale_x_discrete(labels = barLabs) +
+    scale_fill_manual(values = graphColours) +
+    #ylim(NA,3.2)  +
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(), 
+          axis.line = element_line(colour = "black", size=1),
+          axis.title.x=element_blank(),
+          #axis.text.x=element_blank()),
+          axis.ticks=element_line(colour = "black", size =1),
+          axis.ticks.length.x = unit(0, "points"),
+          axis.ticks.length.y = unit(5,"points") ,
+          axis.title.y = element_text(size=15),
+          axis.text = element_text(colour = "black", size=15),
+          axis.text.x = element_text(vjust = -0.25)
+    )
+  if(graph ==T){
+    exptID = readline(prompt = "Enter the experiment ID: ")
+    ggsave(file = paste(selectColumn, "PBABarGraph", paste0(exptID, ".svg"), sep = "_"), plot = p, width = width, height = height)
+  } else{
+    p
+  }
+}

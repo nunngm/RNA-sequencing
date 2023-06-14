@@ -26,7 +26,7 @@ mydata$genotype = factor(mydata$genotype, levels = c("Y_Col", "M_Col",  "Y_bak1.
 
 mydata$genotype = factor(mydata$genotype, levels = c("Y.Col", "M.Col",  "Y.pen3.4", "M.pen3.4", "Y.pdr12.3", "M.pdr12.3", "Y.p3p12","M.p3p12"))
 
-mydata$genotype = factor(mydata$genotype, levels = c("Col-0", "npr1-1",  "npr4-4D", "n1n4"))
+mydata$genotype = factor(mydata$genotype, levels = c("Col-0", "bak1-5",  "bkk1-1", "b1b1"))
 mydata$age = factor(mydata$age, levels = c("Y", "M"))
 mydata$experiment = as.factor(mydata$experiment)
 mydata$cfu = as.numeric(mydata$cfu)
@@ -82,7 +82,7 @@ mydata %>%
     axis.text = element_text(color = "black", size=15)
 )
 
-YMBQGraph = function(data, ageCol = c("#595959","#FFFFFF"), expCol = NA, graph = F, width = 5, height = 4, exptID = "temp", box = F){
+YMBQGraph = function(data, ageCol = c("#595959","#FFFFFF"), ylim = c(4,8), expCol = NA, graph = F, width = 5, height = 4, exptID = "temp", box = F){
   data = data %>% mutate(sampGroup = paste(age, genotype, sep = "_"), cfu = log10(cfu), .keep = "all")
   if(is.na(expCol)){expCol = as.integer(as.factor(data$experiment))}
   
@@ -96,14 +96,14 @@ YMBQGraph = function(data, ageCol = c("#595959","#FFFFFF"), expCol = NA, graph =
   if(box == T ){
     p = p +geom_boxplot(position = position_dodge(width = 0.9), width = 0.8, size = 0.75)
     }else{
-    p = p + stat_summary(fun = mean, position = position_dodge(width = 0.9), geom = "bar", colour = "#000000", size = 0.75, width = 0.8) +
+    p = p + stat_summary(fun = mean, position = position_dodge(width = 0.75), geom = "bar", colour = "#000000", size = 0.75, width = 0.65) +
       stat_summary(fun = mean,
                    fun.min = function(x) {mean(x) - sd(x)},
                    fun.max = function(x) {mean(x) + sd(x)},
-                   geom = "errorbar", lty =1 , size =0.75, width = 0.25, colour = "#000000", position = position_dodge(width = 0.9))
+                   geom = "errorbar", lty =1 , size =0.75, width = 0.25, colour = "#000000", position = position_dodge(width = 0.75))
     }
   p = p + geom_jitter( color= expCol,
-                 size=2, alpha=0.5, position = position_jitterdodge(dodge.width = 1)) + coord_cartesian(ylim = c(4,8)) +    theme(
+                 size=2, alpha=0.5, position = position_jitterdodge(dodge.width = 0.75)) + coord_cartesian(ylim = ylim) +    theme(
                    legend.position="none",
                    plot.title = element_text(size=11)
                  ) + 
@@ -135,9 +135,10 @@ YMBQGraph = function(data, ageCol = c("#595959","#FFFFFF"), expCol = NA, graph =
 }
 
 mydata= read.table(file= "clipboard",sep= "\t",header =T)
-mydata$genotype = factor(mydata$genotype, levels = c("Col-0", "npr1-1",  "npr4-4D", "n1n4"))
+mydata$genotype = factor(mydata$genotype, levels = c("Col-0", "ald1-T2",  "fmo1-1"))
 mydata$age = factor(mydata$age, levels = c("Y", "M"))
 mydata$experiment = as.factor(mydata$experiment)
 mydata$cfu = as.numeric(mydata$cfu)
-YMBQGraph(temp, exptID = "ARR-CSR-22", graph = F, box = F, width = 7, height = 5)
+
+YMBQGraph(temp, exptID = "ARR-CSR-23-1",expCol = "#000000", graph = T, box = F, width = 7, height = 5)
 

@@ -35,6 +35,8 @@ install.packages("ggrepel") #only need to run once
 library(ggrepel)
 
 #Additional PCA components
+
+
 for_pca <- rlog( allData, blind = T )
 sel_pca = for_pca[,sub_24]
 rv <- rowVars(assay(sel_pca))
@@ -45,15 +47,79 @@ rv <- rowVars(assay(sel_pca))
 ntop = 1000
 select <- order(rv, decreasing=TRUE)[seq_len(min(ntop, length(rv)))]
 
-# perform a PCA on the data in assay(x) for the selected genes
-pca <- prcomp(t(assay(sel_pca)[select,]))
-percentVar <- pca$sdev^2/sum(pca$sdev^2)
-intgroup_df <- as.data.frame(colData(sel_pca)[, "group", drop = FALSE])
-group <- if (length("group") > 1) {
-  factor(apply(intgroup_df, 1, paste, collapse = " : "))
-} else{
-  colData(sel_pca)[["group"]]
+PCAplot = function(rlogDat, #regularized log full data set
+                   genes = 1000, # can either be a single number, which selects the top x varying genes, a list of characters, which selects rownames which match items from the user entered list, or can be a list of numbers which will just select the rows as numbered
+                   samples = c(1:36), #defaults to all samples
+                   pc_x = 1, #the PC on the x-axis
+                   pc_y = 2, #the PC on the y-axis,
+                   width = 5, height = 4,
+                   colours = c("red", "blue"),
+                   shapes = c(1,16,0,15),
+                   print2file = F,
+                   colourVar = "age",
+                   shapeVar = "ageinf",
+                   legend.position = "none"
+){
+  rlogDat = rlogDat[,samples]
+  
+  if (length(genes) == 1){
+    rv <- rowVars(assay(rlogDat))
+    genes <- order(rv, decreasing=TRUE)[seq_len(min(genes, length(rv)))] #selects the 'genes' number of top varying genes, if genes>the number of rows then just defaults to all genes
+  }else if(is.character(genes)) {
+    genes = rownames(assay(rlogDat)) %in% genes
+  }
+  pca <- prcomp(t(assay(rlogDat)[genes,]))
+  percentVar <- pca$sdev^2/sum(pca$sdev^2)
+  intgroup_df <- as.data.frame(colData(rlogDat)[, "group", drop = FALSE])
+  group <- if (length("group") > 1) {
+    factor(apply(intgroup_df, 1, paste, collapse = " : "))
+  } else{
+    colData(rlogDat)[["group"]]
+  }
+  d <- data.frame(PC1 = pca$x[, pc_x], PC2 = pca$x[, pc_y], 
+                  group = intgroup_df, 
+                  age = colData(rlogDat)[,1],
+                  inf = colData(rlogDat)[,2],#,
+                  hpi = colData(rlogDat)[,3],
+                  ageinf = factor(paste0(colData(rlogDat)[,1],colData(rlogDat)[,2]), levels = c("ymg", "ypst", "mmg", "mpst"))
+  )
+  
+  p = ggplot(data = d, aes_string(x = "PC1", y = "PC2", color = colourVar), ) + 
+    geom_point(size = 4,shape = shapes[as.integer(unlist(d[shapeVar]))], stroke = 1.5) +  
+    xlab(paste0("PC ",pc_x," (", round(percentVar[pc_x] * 100), "% variance)")) + 
+    ylab(paste0("PC ",pc_y," (", round(percentVar[pc_y] * 100), "% variance)")) + 
+    #coord_fixed() +
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(), 
+          axis.line = element_line(colour = "black", size=1),
+          axis.title.x=element_text(size=15),
+          #axis.text.x=element_blank()),
+          axis.ticks=element_line(colour = "black", size =1),
+          axis.ticks.length = unit(5,"points") ,
+          axis.title.y = element_text(size=15),
+          legend.position = legend.position,
+          axis.text = element_text(size=15),
+    ) + scale_color_manual(values = colours)
+  if (print2file == T){
+    fileName = readline(prompt = "Enter the name of the file: ")
+    ggsave(file = paste0(fileName,".svg"), plot = p, width = width, height = height)
+  }else{p}
 }
+
+genes = 
+
+# perform a PCA on the data in assay(x) for the selected genes
+  pca <- prcomp(t(assay(sel_pca)[select,]))
+  percentVar <- pca$sdev^2/sum(pca$sdev^2)
+  intgroup_df <- as.data.frame(colData(sel_pca)[, "group", drop = FALSE])
+  group <- if (length("group") > 1) {
+    factor(apply(intgroup_df, 1, paste, collapse = " : "))
+  } else{
+    colData(sel_pca)[["group"]]
+  }
+  
+  
 
 #Selecting the principle components
 pc_x = 1

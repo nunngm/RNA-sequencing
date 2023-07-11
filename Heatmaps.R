@@ -11,7 +11,7 @@ library(colorspace)
 library(scales)
 library(ggrepel)
 library(NMF)
-library(GenAnalysis)
+#library(GenAnalysis)
 
 #install packages
 install.packages("devtools")
@@ -84,12 +84,23 @@ selectGeneHeatmap = function(genesOfInterest,filename, colours =c("#0000FF","#32
 
 
 
-pal = colorRampPalette(c("blue", "white", "red"))
+pal = colorRampPalette(c("#FFFF00", "#9609FF"))
 hmcol = hcl_palettes(palette = "Berlin") #Setting the colour palatte
 for_pca <- rlog(allData, blind=F)
 rlogMat <- assay(for_pca) # just making a matrix of the counts that have been corrected for over-dispersion in a "blind" fashion
 
 distsRL <- dist(t(rlogMat)) # Computes a distance matrix (Euclidian Distance)
+mat <- as.matrix(distsRL)  # Make sure it is a matrix
+rlogMat.summ = as.data.frame(matrix(nrow = nrow(rlogMat), ncol = ncol(rlogMat)/3))
+for (i in 0:(ncol(rlogMat)/3-1)){
+    print(i)
+    colnames(rlogMat.summ)[i+1] = gsub(pattern = "_s[0-9]", replacement = "",colnames(rlogMat)[i*3+1])
+    print((i*3+1):(i*3+3))
+    rlogMat.summ[,i+1] = rowMeans(rlogMat[,(i*3+1):(i*3+3)])
+}
+
+
+distsRL <- dist(t(rlogMat.summ)) # Computes a distance matrix (Euclidian Distance)
 mat <- as.matrix(distsRL)  # Make sure it is a matrix
 
 
@@ -102,7 +113,7 @@ hc <- hclust(distsRL
      ,method = "average"
      )  # performs hierarchical clustering
 par(mar=c(7,4,4,2)+0.1)
-hmcol <- colorRampPalette(brewer.pal(9, "GnBu"))(100)# picking our colours
+hmcol <- pal(100)# picking our colours
 
 tiff(filename = "heatmap.tiff", height = 1080, width = 1280) #opens a tiff device
 heatmap.2(mat, Rowv=as.dendrogram(hc),

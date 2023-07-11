@@ -269,11 +269,11 @@ sigGenes_m = results(allData, contrast = c("group", "mpst24", "mmg24"), alpha = 
 sigGenes_m = sigGenes_m[ is.na(sigGenes_m$padj) == F,]
 sigGenes_m = sigGenes_m[sigGenes_m$log2FoldChange > 1  & sigGenes_m$padj < 0.05,]
 
-sigGenes_mmock = results(allData, contrast = c("group", "mmg12", "ymg12"), alpha = 0.05, tidy = T)
+sigGenes_mmock = results(allData, contrast = c("group", "mmg24", "ymg24"), alpha = 0.05, tidy = T)
 sigGenes_mmock = sigGenes_mmock[ is.na(sigGenes_mmock$padj) == F,]
 sigGenes_mmock = sigGenes_mmock[sigGenes_mmock$log2FoldChange > 1  & sigGenes_mmock$padj < 0.05,]
 
-sigGenes_eti = results(etiData, contrast = c("group", "rpm1_24", "mock_24"),  alpha = 0.05, tidy = T)
+sigGenes_eti = results(etiData, contrast = c("group", "rpt2_24", "mock_24"),  alpha = 0.05, tidy = T)
 sigGenes_eti = sigGenes_eti[ is.na(sigGenes_eti$padj) == F,]
 sigGenes_eti = sigGenes_eti[sigGenes_eti$log2FoldChange > 1  & sigGenes_eti$padj < 0.05,]
 
@@ -292,7 +292,7 @@ show_col(colors[1:4] )
 
 venn.diagram(x = list(sigGenes_m$row, sigGenes_eti$row, sigGenes_pti$row),
              category.names = c("ARR", "ETI", "PTI"),
-             filename = "12h ARR-ETI-PTI12hpt.tiff",
+             filename = "12h ARR-ETI-PTI24hpt.tiff",
              output = T,
              imagetype = "tiff",
              euler.d = F,
@@ -303,9 +303,28 @@ venn.diagram(x = list(sigGenes_m$row, sigGenes_eti$row, sigGenes_pti$row),
              cat.cex = 2,
              cat.dist = c(0.12, 0.12,0.12),
              margin =0.15)
+threewayComp = function(s1, s2, s3, names = c("d1", "d2", "d3")){
+  fileName = readline(prompt = "Enter the file name: ")
+  
+  lst = list(s1 = c(setdiff(s1, union(s2,s3))),s2 =  setdiff(s2, union(s1,s3)),s3 =  setdiff(s3, union(s1,s2)),
+            s1s2 = setdiff(intersect(s1,s2), s3), s1s3 = setdiff(intersect(s1,s3), s2), s2s3 = setdiff(intersect(s2,s3), s1),
+            s1s2s3 = intersect(intersect(s1,s2),s3)
+            )
+  lst = lapply(lst, function(x){
+    cbind(x, objectSymbol[x], desvec[x])
+  })
+  
+  write.xlsx2(lst$s1, file = paste0(fileName, ".xlsx"), sheetName = names[1], append = F)
+  write.xlsx2(lst$s2, file = paste0(fileName, ".xlsx"), sheetName = names[2], append = T)
+  write.xlsx2(lst$s3, file = paste0(fileName, ".xlsx"), sheetName = names[3], append = T)
+  write.xlsx2(lst$s1s2, file = paste0(fileName, ".xlsx"), sheetName = paste(names[1], names[2], sep = "&"), append = T)
+  write.xlsx2(lst$s1s3, file = paste0(fileName, ".xlsx"), sheetName = paste(names[1], names[3], sep = "&"), append = T)
+  write.xlsx2(lst$s2s3, file = paste0(fileName, ".xlsx"), sheetName = paste(names[2], names[3], sep = "&"), append = T)
+  write.xlsx2(lst$s1s2s3, file = paste0(fileName, ".xlsx"), sheetName = paste(names[1], names[2], names[3], sep = "&"), append = T)
+}
 
-GOI = sigGenes_eti$row[ sigGenes_eti$row %in% sigGenes_pti$row]
-
+GOI = sigGenes_m$row[! sigGenes_m$row %in% sigGenes_pti$row]
+GOI = GOI[GOI %in% sigGenes_eti$row]
 GOI = rownames(sigGenes_m)[ rownames(sigGenes_m) %in% sigGenes_pti$row]
 
 GOI = GOI[ GOI %in% sigGenes_pti$row]

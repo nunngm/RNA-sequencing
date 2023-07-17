@@ -71,7 +71,7 @@ SAQuantGraph = function(data,genotypes = c("Col-0", "ald1-T2", "fmo1-1"), colour
 
 mydata= read.table(file= "clipboard",sep= "\t",header =T)
 df = mydata
-df$genotype = factor(df$genotype, levels = c("Pst", "Pst ΔalgU mucAB",  "Pst ΔalgU mucAB ΔalgD"))
+df$genotype = factor(df$genotype, levels = c("untreated","mock","Pst", "Pst ΔalgU mucAB",  "Pst algU mucAB ΔalgD"))
 df$experiment = as.factor(df$experiment)
 df$hpi = factor(df$hpi, levels = c("6", "12", "24"))
 df$intercellular = as.numeric(df$intercellular)

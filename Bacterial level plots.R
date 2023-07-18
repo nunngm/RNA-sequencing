@@ -76,12 +76,12 @@ YMBQGraph = function(data, #your data in long format
 }
 
 mydata= read.table(file= "clipboard",sep= "\t",header =T)
-mydata$genotype = factor(mydata$genotype, levels = c("Col-0", "bak1-5",  "bkk1-1", "b1b1")) # change based on your genotype names no spaces in genotype names
+mydata$genotype = factor(mydata$genotype, levels = c("Col-0", "rlp23-1",  "rlp28-1")) # change based on your genotype names no spaces in genotype names
 mydata$age = factor(mydata$age, levels = c("Y", "M"))
 mydata$experiment = as.factor(mydata$experiment)
 mydata$cfu = as.numeric(mydata$cfu)
 
-YMBQGraph(mydata[as.numeric(mydata$experiment) == 4 , ],ageCol = c("#9609FF", "#FFFF00"), exptID = "ARR-CSR-23-1newcol",expCol = "#000000", graph = T, box = F, width = 7, height = 5)
+YMBQGraph(mydata, ageCol = c("#9609FF", "#FFFF00"), exptID = "ARR-RLP-23-ZS",expCol = "#000000", graph = T, box = F, width = 7, height = 6)
 
 ## deprecated
 mydata = read.csv(file = file.choose(),header=T)

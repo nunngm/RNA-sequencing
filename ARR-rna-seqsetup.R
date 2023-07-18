@@ -17,6 +17,8 @@ library(VennDiagram)
 library(scales)
 library(xlsx)
 library(stringi)
+library(tidyr)
+library(agricolae)
 set.seed(31138)
 
 #laptop directory
@@ -282,6 +284,75 @@ view.gene = function(accession, fileName = objectSymbol[toupper(accession)], gra
      } else {
          p  
      }
+}
+
+view.gene.bar = function(accession, fileName = objectSymbol[toupper(accession)], colours = c("#6DFDFD" , "#FFFF00"), graph = F){
+  geneCount <- plotCounts(allData, gene = toupper(accession), 
+                          intgroup = c("age", "infection","hpi"), returnData = TRUE)
+  geneCount$hpi <- as.numeric(as.character(geneCount$hpi))
+  geneCount$hpi[geneCount$hpi == 0] = 0.25
+  geneCount$hpi = factor(as.character(geneCount$hpi), levels = c("0.25", "12", "24"))
+  geneCount$ageinfhpi = paste(as.character(geneCount$age), as.character(geneCount$infection), as.character(geneCount$hpi), sep = "_")
+  
+  anovaModel = aov(log2(count+1) ~ ageinfhpi, data = geneCount)
+  print(HSD.test(anovaModel, alpha=0.05, "ageinfhpi", console=F)$groups)
+  
+p = geneCount %>% 
+    ggplot(., aes(x=hpi:infection, y=count, fill = infection)) +
+    stat_summary(fun = mean, geom = "bar", position = position_dodge(width = 1), colour = "#000000", size = 0.75) +
+    geom_jitter( size=2,#colour = df.graph$rep, 
+                 alpha = 0.5, position = position_jitterdodge(dodge.width = 1, jitter.width = 0.5)) +
+    facet_grid(.~age, labeller = labeller(age = c(y = "Young", m = "Mature"))) +
+    stat_summary(fun = mean,
+                 fun.min = function(x) {ifelse(mean(x) - sd(x)>0, 
+                                               mean(x) - sd(x)
+                                               , 0 )
+                 }, 
+                 fun.max = function(x) {mean(x) + sd(x)}, 
+                 geom = "errorbar", lty =1 , size =0.75, width = 0.25, colour = "#000000", position = position_dodge(width = 1)) +
+    scale_y_continuous(expand = expansion(c(0, 0.1))) +
+    scale_x_discrete(labels = sub(".{1,2}:", replacement = "", levels(hpi:infection)))+
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)#,
+      #axis.text.x =  element_blank()
+    ) + ylab("Transcript abundance") + xlab("") +
+    theme(panel.grid.major = element_blank(),  
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(), 
+          panel.border = element_rect(colour = "black", fill = NA, size = 1),
+          #strip.text.x = element_text(size = 15),
+          #strip.background = element_rect(colour = "black", fill = "#FFFFFF", size = 1),
+          axis.line = element_line(colour = "black", size=0),
+          axis.title.x=element_text(size=15),
+          #axis.text.x=element_blank()),
+          axis.ticks=element_line(colour = "black", size =1),
+          axis.ticks.length = unit(5,"points") ,
+          axis.title.y = element_text(size=15),
+          axis.text = element_text(color = "black", size=15),
+          strip.background.x = element_blank(),
+          strip.text.x = element_blank(),
+          axis.title.x.bottom = element_text(margin = margin(t = 20))
+          ) +
+    scale_fill_manual(values = colours) + ggtitle(fileName) + coord_cartesian(clip = "off")+
+    geom_text(data = data.frame(z = logical(3)),
+               aes(x = rep(c(1.5, 3.5, 5.5), 2), y = -Inf,
+                   label = rep(c("0.25", "12", "24"), 2)),
+               inherit.aes = FALSE, vjust = 3, size = 5) +
+    geom_text(data = data.frame(z = logical(1)),
+              aes(x = rep(c( 3.5), 2), y = -Inf,
+                  label = c("Young", "Mature")),
+              inherit.aes = FALSE, vjust = 4, size = 5)
+  
+ 
+  if (graph == T){
+    ggsave(paste0(fileName, ".png"), plot = p, width = 8, height = 6)
+    
+    p
+    
+  } else {
+    p  
+  }
 }
 
 # Simply takes a bunch of log2FoldChanges and returns the linear fold change

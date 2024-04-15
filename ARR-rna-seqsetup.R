@@ -346,7 +346,7 @@ p = geneCount %>%
   
  
   if (graph == T){
-    ggsave(paste0(fileName, ".png"), plot = p, width = 8, height = 6)
+    ggsave(paste0(fileName, "_bar.svg"), plot = p, width = 8, height = 8)
     
     p
     

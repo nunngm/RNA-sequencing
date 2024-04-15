@@ -10,7 +10,7 @@ library(agricolae)
 
 #laptop directory
 setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-R workshop")
-
+setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR-NPR&PEN3\\exp-PEN3 ARR assays")
 #Desktop directory
 setwd("C:\\Users\\garrett\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-R workshop")
 
@@ -22,11 +22,12 @@ YMBQGraph = function(data, #your data in long format
                      graph = F, #should you output the graph to a file, by default it outputs to R, the output file is .svg which is a vectored image (meanaing it can be scaled up or down infinitely)
                      width = 5, height = 4, #size of the output plot
                      exptID = "temp", #for the output file name, put the id of the experiment
+                     barLabs,
                      box = F #finally, graph defaults to a bar graph (mean+error bars), but can display a boxplot by setting this to True
                      ){
   data = data %>% mutate(sampGroup = paste(age, genotype, sep = "_"), cfu = log10(cfu), .keep = "all")
   if(is.na(expCol)){expCol = as.integer(as.factor(data$experiment))}
-  
+  if(length(barLabs)<2){barLabs = as.character(levels(data$genotype))}
   faces = c("plain", rep("italic", times = length(levels(data$genotype))-1))
   print(data)
   anovaModel = aov(cfu ~ sampGroup, data = data)
@@ -50,7 +51,7 @@ YMBQGraph = function(data, #your data in long format
                  ) + 
     scale_y_continuous(breaks=c(4, 5, 6, 7, 8), 
                        labels = expression(10^4, 10^5, 10^6, 10^7, 10^8),
-                       expand = c(0, 0.05))   + #scale_x_discrete(labels = barLabs) +
+                       expand = c(0, 0.05))   + scale_x_discrete(labels = barLabs) +
     scale_fill_manual(values = ageCol) +
     xlab("Genotype") + ylab(bquote('Bacterial level (cfu leaf disc'^-1*')')) + 
     theme(panel.grid.major = element_blank(), 
@@ -76,19 +77,24 @@ YMBQGraph = function(data, #your data in long format
 }
 
 mydata= read.table(file= "clipboard",sep= "\t",header =T)
-mydata$genotype = factor(mydata$genotype, levels = c("Col-0", "rlp23-1",  "rlp28-1")) # change based on your genotype names no spaces in genotype names
+mydata$genotype = factor(mydata$genotype, levels = c("Col-0", "pen3-4",  "pdr12-3", "p3p12")) # change based on your genotype names no spaces in genotype names
 mydata$age = factor(mydata$age, levels = c("Y", "M"))
 mydata$experiment = as.factor(mydata$experiment)
 mydata$cfu = as.numeric(mydata$cfu)
 
-YMBQGraph(mydata, ageCol = c("#9609FF", "#FFFF00"), exptID = "ARR-RLP-23-ZS",expCol = "#000000", graph = T, box = F, width = 7, height = 6)
+YMBQGraph(mydata, barLabs = c("Col-0\n", "pen3-4\n", "pdr12-3\n", "pen3-4\npdr12-3"), ageCol = c( "#5D2169", "#FFFFFF"), exptID = "ARR-PEN3-all",
+          #expCol = "#000000", 
+          graph = F, box = F, width = 7, height = 6)
 
+YMBQGraph(mydata[mydata$experiment== "ARR-NPR-23-2",], ageCol = c("#EEF3E2", "#00798C"), exptID = "ARR-NPR-23-2-only",expCol = "#000000", graph = F, box = F, width = 7, height = 6)
 ## deprecated
 mydata = read.csv(file = file.choose(),header=T)
 mydata= read.table(file= "clipboard",sep= "\t",header =T) ##This one copies a table from the clipboard
 mydata = gather(mydata, genotype, measurement, Y_Col:M_b1b1)
 mydata$measurement = log10(mydata$measurement)
 mydata = mydata[!is.na(mydata$measurement), ]
+
+mydata$genotype = factor(mydata$genotype, levels = c("Col-0", "npr1-1", "npr4-4D", "n1n4"))
 
 mydata$genotype = factor(mydata$genotype, levels = c("Y_Col", "M_Col", "Y_ald1", "M_ald1",  "Y_sard4", "M_sard4", "Y_fmo1", "M_fmo1"))
 

@@ -18,7 +18,7 @@ samps = as.data.frame(cbind(t(as.data.frame(strsplit(samps[,1], split = ".", fix
 colnames(samps) = c("age", "treatment","hpi", "rep")
 samps$age = factor(samps$age, levels = c("Y", "M"))
 samps$treatment = factor(samps$treatment, levels = c("UN", "MO", "PST"))
-samps$hpi = factor(samps$hpi, levels = c("00", "06","12"))
+samps$hpi = factor(samps$hpi, levels = c("00", "15"))
 
 df.graph = cbind(samps, df.avg)
 
@@ -33,10 +33,10 @@ is_outlier <- function(x) {
   return(x < quantile(x, 0.25, na.rm = T) - 1.5 * IQR(x, na.rm=T) | x > quantile(x, 0.75, na.rm = T) + 1.5 * IQR(x,na.rm = T))
 }
 
-targetGeneName = "ALD1"
+targetGeneName = "FLS2"
 refGeneName = "SEC5A"
 data = df.graph %>%  mutate( sampGroup = paste(age, treatment, hpi, sep = "_"), .keep = "all") %>% mutate(target = 2^(-(get(targetGeneName)-get(refGeneName))))
-anovaModel = aov(log2(target) ~ sampGroup, data = data[data$age=="M",])
+anovaModel = aov(log2(target) ~ sampGroup, data = data[data$age=="Y",])
 print(HSD.test(anovaModel, alpha=0.05, "sampGroup", console=F)$groups)
 
 ## Graph for graphing 3 factor data of young and mature samples
@@ -94,7 +94,7 @@ qpcr3FGraph = function(data, targetGeneName, refGeneName, exptID = "temp", colou
 
 qpcr3FGraph(df.graph, targetGeneName = "FMO1", refGeneName = "SEC5A",exptID = "ARR-PIP-22-1", height = 6, width = 7, colours = c("#54B031", "#0993AE" , "#F6A63C"), graph = F)
 
-qpcr3FGraph(df.graph, targetGeneName = "ALD1", refGeneName = "SEC5A",exptID = "ARR-PIP-22-1", height = 6, width = 7, colours = c("#378717", "#6DFDFD" , "#FFFF00"), graph = T)
+qpcr3FGraph(df.graph, targetGeneName = "FMO1", refGeneName = "CUL4",exptID = "ARR-EARLY-1", height = 6, width = 7, colours = c("#378717", "#6DFDFD" , "#FFFF00"), graph = F)
 
 targetGeneName = "RLP28"
 refGeneName = "SEC5A"

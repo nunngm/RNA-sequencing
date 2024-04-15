@@ -72,10 +72,11 @@ colocGraph = function(data,
             axis.ticks=element_line(colour = "black", size =1),
             axis.ticks.length.x = unit(5, "points"),
             axis.ticks.length.y = unit(5,"points") ,
-            axis.title.y = element_text(size=15),
-            axis.text = element_text(colour = "black", size=15),
-            axis.text.x = element_text(vjust = -0.25, face = "italic"),
-            legend.position = "none")
+            axis.title.y = element_text(size=20),
+            axis.text = element_text(colour = "black", size=20),
+            axis.text.x = element_text(vjust = -0.25),#, face = "italic"),
+            legend.position = "none",
+            plot.margin = margin(t = 10, b= 10))
   if (print2file ==T){
     exptID = readline(prompt = "Enter experiment ID: ")
     ggsave(file = paste(exptID, stain, paste0(colocalisation, ".svg"), sep = "_"), plot = p, width = width, height = height)
@@ -88,3 +89,4 @@ slabels = c("Pst\n", "Pst ΔalgD\n","Pst ΔalgU\nmucAB", "Pst ΔalgU\nmucAB Δal
 slevels = c("Pst", "Pst ΔalgD","Pst ΔalgU mucAB", "Pst ΔalgU mucAB ΔalgD")
 
 colocGraph(data, stain = "ConA", colocalisation = "cooccuranceBA", strain.labels = slabels, strain.levels = slevels, print2file = T)
+colocGraph(data, stain = "CFW", colocalisation = "ICQ", strain.levels = c("ConA", "CFW"), print2file = T, width = 4, height = 6)

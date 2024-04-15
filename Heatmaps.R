@@ -41,13 +41,13 @@ show_col(hmcol)
 mydata= read.table(file= "clipboard",sep= "\t",header =T)
 
 selectGeneHeatmap = function(genesOfInterest,filename, colours =c("#0000FF","#3230EF","#4442E7", "#5251E3","#605FE1","#6E6DE1","#7E7DE3","#9191E7","#ABABED","#FFFFFF","#FFACAB","#FF918F","#FF7D7A","#FF6C68","#FF5C57","#FF4D47","#FF3E35","#FF2D20","#FF0000"),
-                             padj = 0.05, width = 5, height =4, graph = F){
+                             padj = 0.05, width = 5, height =4, graph = F, annotateGenes = F, annColors = c("#FFFFFF", "#FF0000")){
   comp = lapply(levels(hpi), function(x){ #Picks makes the comparisons for y.pst, m.mock, m.pst compared to y.mock at each time point
     list(results(allData, contrast = c("group", paste0("ypst", x), paste0("ymg", x)), alpha = padj, pAdjustMethod="BH", tidy = T), 
          results(allData ,contrast = c("group", paste0("mmg", x), paste0("ymg", x)), alpha = padj, pAdjustMethod="BH", tidy = T), 
          results(allData,contrast = c("group", paste0("mpst", x),paste0("ymg",x)), alpha = padj, pAdjustMethod="BH", tidy = T))
   })
-
+  
   GOI.bool = comp[[1]][[1]]$row %in% genesOfInterest$accession #makes a list of T/F values that is just the genes of interest
   # make a matrices of log2-fold changes and adjusted p-values
   l2fc = cbind(comp[[1]][[1]]$log2FoldChange, comp[[1]][[2]]$log2FoldChange, comp[[1]][[3]]$log2FoldChange,
@@ -70,15 +70,20 @@ selectGeneHeatmap = function(genesOfInterest,filename, colours =c("#0000FF","#32
   
   #Rorder rows to be in order supplied in the genes of interest input
   l2fc = l2fc[unlist2(lapply(genesOfInterest$accession, function(x){grep(x, rownames(l2fc))})), ] #have to reorder
-  
+  pvals = pvals[unlist2(lapply(genesOfInterest$accession, function(x){grep(x, rownames(pvals))})), ]
+  if (annotateGenes==T){
+    annotation = as.character(genesOfInterest$annotation)
+  } else {
+    annotation = NA
+  }
   #Set boxes with an adjusted p-val <0.05 to 0 (no sig diff)
   l2fc[pvals>0.05] = 0
   if(graph ==T){
     svg(filename = paste0(filename,".svg"),width = width, height = height)
-    aheatmap(l2fc, color = colours, border_color = "#888888", Rowv = NA, Colv = NA, distfun= "euclidean",hclustfun = "average", scale = "none", labRow = genesOfInterest$label, breaks =-0.33)
+    aheatmap(l2fc, color = colours, border_color = "#888888", Rowv = NA, Colv = NA, distfun= "euclidean",hclustfun = "average", scale = "none", labRow = genesOfInterest$label, breaks =-0.33, annRow = annotation, annColors = list(X1 = annColors), annLegend = F)
     dev.off()
   }else{
-    aheatmap(l2fc, color = pal(25), border_color = "#888888", Rowv = NA, Colv = NA, distfun= "euclidean",hclustfun = "average", scale = "none", labRow = genesOfInterest$label, breaks =-0.33)
+    aheatmap(l2fc, color = colours, border_color = "#888888", Rowv = T, Colv = NA, distfun= "euclidean", hclustfun = "average", scale = "none", labRow = genesOfInterest$label, breaks =-0.33, annRow = annotation, annColors = list(X1 = annColors), annLegend = F)
   }
 }
 
@@ -137,7 +142,7 @@ genes_of_interest = unique(c( rownames(allComp$mpst0mmg0[allComp$mpst0mmg0$padj 
 mpstcomp = list(results(allData,contrast = c("group", "mpst0", "ymg0"), alpha = 0.05, pAdjustMethod="BH", tidy = T), results(allData,contrast = c("group", "mpst12", "ymg12"), alpha = 0.05, pAdjustMethod="BH", tidy = T), results(allData,contrast = c("group", "mpst24", "ymg24"), alpha = 0.05, pAdjustMethod="BH", tidy = T))
 
 GOI = rownames(allComp$ypst0ymg0) %in% genes_of_interest
-GOI = rownames(allComp$ypst0ymg0) %in% mydata$accsession
+GOI = rownames(allComp$ypst0ymg0) %in% mydata$accession
 
 finalLFC = cbind(allComp$ypst0ymg0[GOI, 2], allComp$mmg0ymg0[GOI,2], mpstcomp[[1]][GOI, 3], allComp$ypst12ymg12[GOI, 2], allComp$mmg12ymg12[GOI, 2], mpstcomp[[2]][GOI, 3], allComp$ypst24ymg24[GOI, 2], allComp$mmg24ymg24[GOI, 2], mpstcomp[[3]][GOI, 3])
 
@@ -175,14 +180,14 @@ heatmap_full
 
 mydata= read.table(file= "clipboard",sep= "\t",header =T)
 labels = mydata$label
-names(labels) = mydata$accsession
+names(labels) = mydata$accession
 
 finalLFC = finalLFC[unlist2(lapply(names(labels), function(x){grep(x,rownames(finalLFC))})),]
 rownames(finalLFC) = 
 
 grep()
 tiff("rplot2.tiff", width = 4000, height = 2000)
-svg(filename = "ETI heatmap-reduv2.svg",width = 5, height = 4)
+svg(filename = "ARR-specific RLPs.svg",width = 5, height = 4)
 aheatmap(finalLFC, color = hmcol, border_color = "#888888", Rowv = NA, Colv = NA, distfun= "euclidean",hclustfun = "average", scale = "none", labRow = labels[rownames(finalLFC)], breaks =0)
 dev.off()
 

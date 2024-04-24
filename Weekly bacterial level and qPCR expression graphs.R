@@ -78,7 +78,7 @@ weeklyBacterialLevel = function(data, labels = NULL, exptID = "exptID", colours 
   }
 }
 
-weeklyBacterialLevel(data = df.graph, labels = c(3,4,5,6), exptID = "WKEX-22-3", colours = pal(4), graph = T)
+weeklyBacterialLevel(data = df.graph, labels = c(3,4,5,6), exptID = "WKEX-22-3-new", colours = pal(4), graph = T)
 
 ## weekly qPCR data
 weeklyQPCR = function(data, targetGeneName, scale = c(0,NA), refGeneName, labels = NULL, exptID = "exptID", colours = c("yellow","red", "green", "blue"), width = 5, height = 4, graph = F){
@@ -125,5 +125,5 @@ weeklyQPCR = function(data, targetGeneName, scale = c(0,NA), refGeneName, labels
   }
 }
 
-weeklyQPCR(data = df.graph, scale = c(0,0.16), targetGeneName = "FMO1", refGeneName = "SEC5A", labels = c(3,4,5,6), colours = pal(4), exptID = "WKEX-23-2-scaled" , graph = T)
+weeklyQPCR(data = df.graph, scale = c(0,NA), targetGeneName = "RLP23", refGeneName = "CUL4", labels = c(3,4,5,6), colours = pal(4), exptID = "WKEX-23-2-new" , graph = F)
 # outlier calculation

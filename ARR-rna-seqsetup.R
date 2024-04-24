@@ -286,7 +286,7 @@ view.gene = function(accession, fileName = objectSymbol[toupper(accession)], gra
      }
 }
 
-view.gene.bar = function(accession, fileName = objectSymbol[toupper(accession)], colours = c("#6DFDFD" , "#FFFF00"), graph = F){
+view.gene.bar = function(accession, fileName = objectSymbol[toupper(accession)], colours = c("#6DFDFD" , "#FFFF00"), graph = F, width = 8, height = 8){
   geneCount <- plotCounts(allData, gene = toupper(accession), 
                           intgroup = c("age", "infection","hpi"), returnData = TRUE)
   geneCount$hpi <- as.numeric(as.character(geneCount$hpi))
@@ -346,7 +346,7 @@ p = geneCount %>%
   
  
   if (graph == T){
-    ggsave(paste0(fileName, "_bar.svg"), plot = p, width = 8, height = 8)
+    ggsave(paste0(fileName, "_bar.svg"), plot = p, width = width, height = height)
     
     p
     

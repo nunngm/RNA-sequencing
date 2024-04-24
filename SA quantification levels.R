@@ -133,7 +133,7 @@ SAQuantGraph.byTreatment = function(data, genotypes = c("Col-0", "pen3-4", "pdr1
     p
   }
 }
-SAQuantGraph.byTreatment(mydata[mydata$age == "Y" & mydata$experiment =="ARR-PEN3-21-1",], ylim = c(0,3500), selectTreatments = c("UN","PST"), colours = c("#FFFFFF", "#FF3853"), width =7, height = 6, SA="intra", graph = T)
+SAQuantGraph.byTreatment(mydata[mydata$age == "M" & mydata$experiment =="ARR-PEN3-21-2",], ylim = c(0,4000), selectTreatments = c("UN","PST"), colours = c("#FFFFFF", "#FF3853"), width =7, height = 6, SA="intra", graph = T)
 ## Working on Pst strains
 
 

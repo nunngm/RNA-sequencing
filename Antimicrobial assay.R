@@ -1,6 +1,7 @@
 ##Quantification of SA levels
 library(ggplot2)
 library(dplyr)
+library(plyr)
 library(agricolae)
 library(stringr)
 library(emmeans)
@@ -16,19 +17,19 @@ mydata[, 4:ncol(mydata)] = lapply(mydata[,4:ncol(mydata)], as.numeric)
 mydata[,4:ncol(mydata)] = lapply(mydata[,4:ncol(mydata)], function(x){ temp = x-rowMeans(mydata[,grepl("BLANK", colnames(mydata))])})
 mydata = mydata[, !grepl("BLANK", colnames(mydata))] #remove blank columns
 sampleGroups = as.data.frame(str_split_fixed(as.character(colnames(mydata[,4:ncol(mydata)])), pattern = "_", 3))
-colnames(sampleGroups) = c("strain", "AB_conc", "BR")
+colnames(sampleGroups) = c("strain", "treatment", "BR")
 
 x = mydata$time
-y = mydata$YMM12_0_1
+y = mydata$EV_0_1
 fit <- nls(y ~ SSlogis(x, Asym, xmid, scal), trace = T, data = data.frame(x, y))
 
-fit <- nls(mydata$YMM12_0_1 ~ SSlogis(mydata$time, Asym, xmid, scal), data = data.frame(mydata$time, mydata$YMM12_0_1))
+fit <- nls(mydata$EV_0_1 ~ SSlogis(mydata$time, Asym, xmid, scal), data = data.frame(mydata$time, mydata$EV_0_1))
 model = lm(lm(y~I(x^3)+I(x^2)+x))
 #model = lm(YMM12_0_1 ~ time, data = mydata)
-mydata <- mydata %>%
-  dplyr::select( -matches('fit'), -matches('lwr'), -matches('upr') ) %>%
-  cbind( predict(model, interval='conf'))
-ggplot(mydata, aes(x=time, y=YMM12_0_1)) +
+# mydata <- mydata %>%
+#   dplyr::select( -matches('fit'), -matches('lwr'), -matches('upr') ) %>%
+#   cbind( predict(model, interval='conf'))
+ggplot(mydata, aes(x=time, y=EV_0_1)) +
   geom_point() 
 
 +
@@ -39,17 +40,17 @@ ggplot(mydata, aes(x=time, y=YMM12_0_1)) +
 
 
 
-fit = nls(YMM12_500_1 ~ SSlogis(time, Asym, xmid, scal), data = mydata)
-fit = nls(YMM12_500_1 ~ SSfpl(time, A, B, xmid, scal), data = mydata)
-fit = nls(YMM12_0_1 ~ SSgompertz(time, Asym, b2, b3), data = mydata)
+fit = nls(EV_0.5_1 ~ SSlogis(time, Asym, xmid, scal), data = mydata)
+fit = nls(EV_0.5_1 ~ SSfpl(time, A, B, xmid, scal), data = mydata)
+fit = nls(EV_0.5_1 ~ SSgompertz(time, Asym, b2, b3), data = mydata)
 
-plot(mydata$YMM12_100_1~mydata$time)
+plot(mydata$EV_0.5_1~mydata$time)
 lines(seq(0.5, 48, length.out = 100), predict(fit, newdata = data.frame(time = seq(0.5, 48, length.out = 100)))) # Predict just plops out the predicted y-axis points
 new.data = data.frame(time = seq(0.5, 48, length.out = 100))
 interval = as_tibble(predFit(fit, newdata = new.data, interval = "confidence", level = 0.95)) %>% mutate(time = new.data$time)
 
 
-p1 <- ggplot(mydata) +  geom_point(aes(x=time, y=YMM12_500_1),size=2, colour="black") + xlab("Time (h)") + ylab("Optical density (OD600)") 
+p1 <- ggplot(mydata) +  geom_point(aes(x=time, y=EV_0.5_1),size=2, colour="black") + xlab("Time (h)") + ylab("Optical density (OD600)") 
 p1 + geom_line(data=interval, aes(x = time, y = fit ))+
   geom_ribbon(data=interval, aes(x=time, ymin=lwr, ymax=upr), alpha=1, inherit.aes=F, fill="blue")+
   theme_classic()
@@ -58,16 +59,18 @@ p1 + geom_line(data=interval, aes(x = time, y = fit ))+
 ## next steps, convert data to long format with a sample type column, group_by() sample type and make the models then.
 mydata.long = gather(mydata[,3:ncol(mydata)], key = "well", value = "OD600", -time) # converts to long form
 sampleGroups = as.data.frame(str_split_fixed(as.character(mydata.long[,2]), pattern = "_", 3))
-colnames(sampleGroups) = c("strain", "AB_conc", "BR")
+colnames(sampleGroups) = c("strain", "treatment", "BR")
 mydata.long = cbind(mydata.long, sampleGroups)
 
-fit = nls(OD600 ~ SSfpl(time, A, B, xmid, scal), data = mydata.long[mydata.long$AB_conc == "0" & mydata.long$time%%2 ==0 & mydata.long$BR!=1,] ) # reducing the timepoints (and outlying first bio rep really helped this model work better)
-fit = nls(OD600 ~ SSfpl(time, A, B, xmid, scal), data = mydata.long[mydata.long$AB_conc == "0",])
-#fit = nls(OD600 ~ SSlogis(time, Asym, xmid, scal), data = mydata.long[mydata.long$AB_conc == "0",]) # for a three parameter logistic curve but the four-parameter logistic had a better fit
-#fit = nls(OD600 ~ SSgompertz(time, Asym, b2, b3), data = mydata.long[mydata.long$AB_conc == "0",]) # tried gompertz and it had a worse fit but probably because I wasn't setting the start conditions.
-new.data = data.frame(time = seq(0.5, 48, length.out = 100))
+fit = nls(OD600 ~ SSfpl(time, A, B, xmid, scal), data = mydata.long[mydata.long$treatment == "0.5" & mydata.long$time%%2 ==0 ,] ) # reducing the timepoints (and outlying first bio rep really helped this model work better)
+fit = nls(OD600 ~ SSfpl(time, A, B, xmid, scal), data = mydata.long[mydata.long$treatment == "0",])
+#fit = nls(OD600 ~ SSlogis(time, Asym, xmid, scal), data = mydata.long[mydata.long$treatment == "0",]) # for a three parameter logistic curve but the four-parameter logistic had a better fit
+#fit = nls(OD600 ~ SSgompertz(time, Asym, b2, b3), data = mydata.long[mydata.long$treatment == "0",]) # tried gompertz and it had a worse fit but probably because I wasn't setting the start conditions.
+new.data = data.frame(time = seq(0, 48, length.out = 25))
 interval = as_tibble(predFit(fit, newdata = new.data, interval = "confidence", level = 0.99)) %>% mutate(time = new.data$time)
-p1 <- ggplot(mydata.long[mydata.long$AB_conc == "0"|mydata.long$AB_conc == "500",]) +  geom_point(aes(x=time, y=OD600),size=2, colour="black") + xlab("Time (h)") + ylab("Optical density (OD600)") 
+p1 <- ggplot(mydata.long[mydata.long$treatment == "0"
+                         |mydata.long$treatment == "1"
+                         ,]) +  geom_point(aes(x=time, y=OD600),size=2, colour="black") + xlab("Time (h)") + ylab("Optical density (OD600)") 
 p1 + geom_line(data=interval, aes(x = time, y = fit ))+
   geom_ribbon(data=interval, aes(x=time, ymin=lwr, ymax=upr), alpha=0.5, inherit.aes=F, fill="blue")+
   theme_classic()
@@ -79,7 +82,7 @@ p1 + geom_line(data=new.data, aes(x = time, y = fit ))+
 ## Boot strap confidence intervals -> This is the way to go for CIs
 bootFun = function(newdata){
   start = coef(fit)
-  df = mydata.long[mydata.long$AB_conc == "0"& mydata.long$time%%2 ==0 & mydata.long$BR!=1,]
+  df = mydata.long[mydata.long$treatment == "0.5"& mydata.long$time%%2 ==0,]
   dfboot <- df[sample(nrow(df), size = nrow(df), replace = TRUE),]
   bootfit = try(update(fit,
                        start = start,
@@ -91,16 +94,103 @@ bootFun = function(newdata){
 
 bmat <- replicate(500, bootFun(new.data)) # run the boot strapping
 ### Make the line to graph on your plot
-new.data = data.frame(time = seq(0.5, 48, length.out = 100))
-new.data$fit = new$fit <- predict(fit, newdata = new.data)
+new.data = data.frame(time = seq(0, 48, length.out = 25))
+new.data$fit = predict(fit, newdata = new.data)
 new.data$lwr <- apply(bmat, 1, quantile, 0.005, na.rm = TRUE) 
 new.data$upr <- apply(bmat, 1, quantile, 0.995, na.rm = TRUE) # upr and lwr together make a confidence interval with a probability width of 0.01
 
 
-# ARETE
+# summarizing and graphing
+## summarize the data in long format
+dataSummary = function(data, varName, keyVariables = c("strain", "treatment", "time"), control = "0", var_interest, interval = 2){ # a simple function which just pulls out the mean optical density for each condition at the indicated intervals relative to the selected treatment
+
+  summary_func = function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE))
+  } # collects the means
+  
+  data = subset(data, time%%interval==0) # only pick the times at the intervals of interest
+  data_sum =ddply(data, keyVariables, .fun=summary_func,
+                  varName) # summarize the data based on the key variables defined above
+  data_sum = rename(data_sum, c("mean" = varName)) # rename the mean column to the original varibale's name
+  data_sum = data_sum[data_sum$treatment == control|data_sum$treatment == var_interest,] # pick out only treatments of interest (e.g. the control and one other)
+  
+  return(data_sum)
+}
+data.sub = dataSummary(mydata.long, varName = "OD600", var_interest = "0.5")
+
+ggplot(data.sub, aes(x = time, y = OD600, color = strain, shape = treatment))+geom_line() + geom_point() + geom_errorbar(aes(ymin = OD600 - sd, ymax = OD600 + sd), width = .2, position= position_dodge(0.05))
+
+## quick bar graph at a specific time point
+ggplot(data.sub[data.sub$time ==48,], aes(x=strain, y=OD600, fill = treatment)) + 
+  geom_bar(stat="identity", color="black", 
+           position=position_dodge()) +
+  geom_errorbar(aes(ymin=OD600-sd, ymax=OD600+sd), width=.2,
+                position=position_dodge(.9)) 
+
+# ARETe
 # this is from above you need take the "well" column and split into a strain column and a SA conc column
 sampleGroups = as.data.frame(str_split_fixed(as.character(colnames(mydata[,4:ncol(mydata)])), pattern = "_", 3)) # this is from above you need take the "well" column and split into a strain column and a SA conc column
 
+sum.bar = function(data, varName, keyVariables = c("strain", "treatment", "time"), test, control, select_time, relative = F){
+  controlSummary = function(data, varName, keyVariables = c("strain", "treatment", "time"), control){
+    
+    summary_func = function(x, col){
+      c(mean = mean(x[[col]], na.rm=TRUE),
+        sd = sd(x[[col]], na.rm=TRUE))
+    }
+    
+    data_sum =ddply(data, keyVariables, .fun=summary_func,
+                    varName)
+    data_sum = rename(data_sum, c("mean" = varName))
+    data_sum = data_sum[data_sum$treatment == control,]
+    
+    return(data_sum)
+  }
+  
+  ref = controlSummary(mydata.long, varName = "OD600", control = "0")
+  
+  data = data[data$time == select_time, ] # select the specific time point to be used
+  #data = data[data$treatment == control|data$treatment == test,] # select specific tretaments
+  
+  if (relative ==T){
+    data[data$strain == "EV", ]$OD600 = (data[data$strain == "EV", ]$OD600 - ref[ref$strain =="EV" &ref$time==0,]$OD600)/(ref[ref$strain == "EV"& ref$time == select_time,]$OD600- ref[ref$strain =="EV" &ref$time==0,]$OD600) * 100
+    
+    for(i in levels(as.factor(data$strain))){
+      data[data$strain == i, ]$OD600 = (data[data$strain == i, ]$OD600 - ref[ref$strain ==i &ref$time==0,]$OD600)/(ref[ref$strain == i& ref$time == select_time,]$OD600- ref[ref$strain ==i &ref$time==0,]$OD600) * 100
+      
+    }
+    xlab = "Relative growth (%)"
+  }
+  ### Subset by treatment
+  
+  ### plot the findings (under construction)
+  p = ggplot(data, aes(x=strain, y=OD600, fill = treatment )) + geom_jitter( color= expCol,
+                       size=2, alpha=0.5, position = position_jitterdodge(dodge.width = 0.75)) + coord_cartesian(ylim = ylim) +    theme(
+                         legend.position="none",
+                         plot.title = element_text(size=11)
+                       ) + 
+    scale_y_continuous(breaks=c(4, 5, 6, 7, 8), 
+                       labels = expression(10^4, 10^5, 10^6, 10^7, 10^8),
+                       expand = c(0, 0.05))   + scale_x_discrete(labels = barLabs) +
+    scale_fill_manual(values = ageCol) +
+    xlab("Genotype") + ylab(bquote('Bacterial level (cfu leaf disc'^-1*')')) + 
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(), 
+          axis.line = element_line(colour = "black", size=1),
+          axis.title.x=element_text(size=15),
+          axis.text.x=element_text(face = faces),
+          axis.ticks.y=element_line(colour = "black", size =1),
+          axis.ticks.length.y = unit(5, "points"),
+          axis.ticks.length.x = unit(5, "points"),
+          axis.ticks.x=element_line(colour = "black", size = 1),
+          #ggh4x.axis.ticks.length.minor = rel(5),
+          axis.ticks.length = unit(5,"points") ,
+          axis.title.y = element_text(size=15),
+          axis.text = element_text(color = "black", size=15)
+    )
+}
 
 toGraph = t(mydata[, 4:ncol(mydata)])
 colnames(toGraph) = mydata$time

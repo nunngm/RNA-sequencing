@@ -198,7 +198,132 @@ weeklyBacterialLevel = function(data, exptID = "exptID", colours = c("red", "gre
   }
 }
 
+## Fig 8 work
+setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR-NPR&PEN3\\exp-NPR qPCR data\\YM graphs")
 
+df.avg = read.table("clipboard", sep = "\t", row.names = 1,header=T)
+samps = rownames(df.avg)
+samps = t(as.data.frame(strsplit(samps, split = "_", fixed = T)))
+samps = as.data.frame(cbind(t(as.data.frame(strsplit(samps[,1], split = ".", fixed = T))), samps[,2]))
+colnames(samps) = c("genotype", "age","treatment", "rep")
+samps$genotype = factor(samps$genotype, levels = c("Col", "npr1-1", "npr4-4D", "n1n4"))
+samps$age = factor(samps$age, levels = c("Y", "M"))
+samps$treatment = factor(samps$treatment, levels = c("UN", "MO", "PST"))
+
+df.graph = cbind(samps, df.avg)
+
+qPCRgraph.byGenotype = function(data, targetGeneName, refGeneName, exptID = "temp", colours = c("red", "blue"), width = 8, height = 6, graph = F){
+  data = data %>%  mutate( sampGroup = paste(genotype, age, sep = "_"), .keep = "all") %>% mutate(target = 2^(-(get(targetGeneName)-get(refGeneName))))
+  print(data)
+  anovaModel = aov(log2(target) ~ sampGroup, data = data)
+  print(HSD.test(anovaModel, alpha=0.05, "sampGroup", console=F)$groups)
+  
+  p = data %>% group_by(sampGroup) %>% 
+    #mutate(target = log10(target)) %>%
+    mutate(inlier = ifelse(is_outlier(target), as.numeric(NA), target), outlier = ifelse(is_outlier(target), target, as.numeric(NA)) ) %>% 
+    mutate(inlier = target) %>% 
+    ggplot(., aes(x=genotype, y=inlier, fill = age)) +
+    stat_summary(fun = mean, geom = "bar", position = position_dodge(width = 1), colour = "#000000", size = 0.75) +
+    geom_jitter( size=2,#colour = df.graph$rep, 
+                 alpha = 0.5, position = position_jitterdodge(dodge.width = 1, jitter.width = 0.8)) +
+    stat_summary(fun = mean,
+                 fun.min = function(x) {ifelse(mean(x) - sd(x)>0, 
+                                               mean(x) - sd(x)
+                                               , 0 )
+                 }, 
+                 fun.max = function(x) {mean(x) + sd(x)}, 
+                 geom = "errorbar", lty =1 , size =0.75, width = 0.25, colour = "#000000", position = position_dodge(width = 1)) +
+    scale_y_continuous(expand = expansion(c(0, 0.1)))+
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11),
+      axis.text.x =  element_blank()
+    ) + ylab(paste0(targetGeneName,"/", refGeneName)) + xlab("") +
+    theme(panel.grid.major = element_blank(),  
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(), 
+          #panel.border = element_rect(colour = "black", fill = NA, size = 1),
+          #strip.text.x = element_text(size = 15),
+          #strip.background = element_rect(colour = "black", fill = "#FFFFFF", size = 1),
+          axis.line = element_line(colour = "black", size=1),
+          axis.title.x=element_text(size=15),
+          #axis.text.x=element_blank()),
+          axis.ticks=element_line(colour = "black", size =1),
+          axis.ticks.length = unit(5,"points") ,
+          axis.title.y = element_text(size=15),
+          axis.text = element_text(color = "black", size=15),
+          strip.background.x = element_blank(),
+          strip.text.x = element_blank()) +
+    scale_fill_manual(values = colours)
+  # + theme_few()
+  if(graph ==T){
+    exptID = readline(prompt = "Enter experimentID:")
+    ggsave(file = paste(targetGeneName, refGeneName, paste0(exptID, ".svg"), sep = "_"), plot = p, width = width, height = height)
+  } else{
+    p
+  }
+  
+}
+
+qPCRgraph.byGenotype(df.graph,"RLP23", "SEC5A",colours = c("#FFFFFF","#378717"), graph = F, width = 4, height = 4)
+
+setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR-NPR&PEN3\\exp-NPR qPCR data\\MP graphs")
+df.avg = read.table("clipboard", sep = "\t", row.names = 1,header=T)
+
+qPCRgraph.byTreatment = function(data, targetGeneName, refGeneName, exptID = "temp", colours = c("red", "blue"), width = 8, height = 6, graph = F){
+  data = data %>%  mutate( sampGroup = paste(genotype, treatment, sep = "_"), .keep = "all") %>% mutate(target = 2^(-(get(targetGeneName)-get(refGeneName))))
+  print(data)
+  anovaModel = aov(log2(target) ~ sampGroup, data = data)
+  print(HSD.test(anovaModel, alpha=0.05, "sampGroup", console=F)$groups)
+  
+  p = data %>% group_by(sampGroup) %>% 
+    #mutate(target = log10(target)) %>%
+    mutate(inlier = ifelse(is_outlier(target), as.numeric(NA), target), outlier = ifelse(is_outlier(target), target, as.numeric(NA)) ) %>% 
+    mutate(inlier = target) %>% 
+    ggplot(., aes(x=genotype, y=inlier, fill = treatment)) +
+    stat_summary(fun = mean, geom = "bar", position = position_dodge(width = 1), colour = "#000000", size = 0.75) +
+    geom_jitter( size=2,#colour = df.graph$rep, 
+                 alpha = 0.5, position = position_jitterdodge(dodge.width = 1, jitter.width = 0.8)) +
+    stat_summary(fun = mean,
+                 fun.min = function(x) {ifelse(mean(x) - sd(x)>0, 
+                                               mean(x) - sd(x)
+                                               , 0 )
+                 }, 
+                 fun.max = function(x) {mean(x) + sd(x)}, 
+                 geom = "errorbar", lty =1 , size =0.75, width = 0.25, colour = "#000000", position = position_dodge(width = 1)) +
+    scale_y_continuous(expand = expansion(c(0, 0.1)))+
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11),
+      axis.text.x =  element_blank()
+    ) + ylab(paste0(targetGeneName,"/", refGeneName)) + xlab("") +
+    theme(panel.grid.major = element_blank(),  
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(), 
+          #panel.border = element_rect(colour = "black", fill = NA, size = 1),
+          #strip.text.x = element_text(size = 15),
+          #strip.background = element_rect(colour = "black", fill = "#FFFFFF", size = 1),
+          axis.line = element_line(colour = "black", size=1),
+          axis.title.x=element_text(size=15),
+          #axis.text.x=element_blank()),
+          axis.ticks=element_line(colour = "black", size =1),
+          axis.ticks.length = unit(5,"points") ,
+          axis.title.y = element_text(size=15),
+          axis.text = element_text(color = "black", size=15),
+          strip.background.x = element_blank(),
+          strip.text.x = element_blank()) +
+    scale_fill_manual(values = colours)
+  # + theme_few()
+  if(graph ==T){
+    exptID = readline(prompt = "Enter experimentID:")
+    ggsave(file = paste(targetGeneName, refGeneName, paste0(exptID, ".svg"), sep = "_"), plot = p, width = width, height = height)
+  } else{
+    p
+  }
+  
+}
+
+qPCRgraph.byTreatment(df.graph,"ALD1", "SEC5A",colours = c("#6DFDFD","#FFFF00"), graph = F, width = 4, height = 4)
 
 qpcrWeeklyGraph = function(data, targetGeneName, refGeneName, exptID = "exptID", colours = c("red", "green", "blue"), width = 8, height = 6, graph = F){
   data = data %>%  mutate(target = 2^(-(get(targetGeneName)-get(refGeneName))), sampGroup = paste(age, treatment, hpi, sep = "_"), .keep = "all")

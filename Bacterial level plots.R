@@ -7,10 +7,13 @@ library(ggplot2)
 library(ggh4x)
 library(grDevices)
 library(agricolae)
+library(dplyr)
+detach(package:plyr)
 
 #laptop directory
 setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-R workshop")
 setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR-NPR&PEN3\\exp-PEN3 ARR assays")
+setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR-NPR&PEN3\\exp-NPR ARR assay")
 #Desktop directory
 setwd("C:\\Users\\garrett\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-R workshop")
 
@@ -31,7 +34,7 @@ YMBQGraph = function(data, #your data in long format
   faces = c("plain", rep("italic", times = length(levels(data$genotype))-1))
   print(data)
   anovaModel = aov(cfu ~ sampGroup, data = data)
-  print(data %>%group_by(genotype,age)%>% summarise(cfu = mean(cfu)) %>% summarise(foldDiff = 10^(cfu[age == 'Y'] - cfu[age == 'M'])))
+  data %>% group_by(genotype,age)%>% summarise(cfu = mean(cfu)) %>% summarise(foldDiff = 10^(cfu[age == 'Y'] - cfu[age == 'M']))
   print(HSD.test(anovaModel, alpha=0.05, "sampGroup", console=F)$groups)
   
   p = ggplot(data, aes(x=genotype, y=cfu, fill = age ))
@@ -75,9 +78,9 @@ YMBQGraph = function(data, #your data in long format
     p
   }
 }
-
+data= read.table(file= "clipboard",sep= "\t",header =T)
 mydata= read.table(file= "clipboard",sep= "\t",header =T)
-mydata$genotype = factor(mydata$genotype, levels = c("Col-0", "pen3-4",  "pdr12-3", "p3p12")) # change based on your genotype names no spaces in genotype names
+mydata$genotype = factor(mydata$genotype, levels = c("Col-0", "npr1-1",  "npr4-4D", "n1n4")) # change based on your genotype names no spaces in genotype names
 mydata$age = factor(mydata$age, levels = c("Y", "M"))
 mydata$experiment = as.factor(mydata$experiment)
 mydata$cfu = as.numeric(mydata$cfu)
@@ -86,7 +89,8 @@ YMBQGraph(mydata, barLabs = c("Col-0\n", "pen3-4\n", "pdr12-3\n", "pen3-4\npdr12
           #expCol = "#000000", 
           graph = F, box = F, width = 7, height = 6)
 
-YMBQGraph(mydata[mydata$experiment== "ARR-NPR-23-2",], ageCol = c("#EEF3E2", "#00798C"), exptID = "ARR-NPR-23-2-only",expCol = "#000000", graph = F, box = F, width = 7, height = 6)
+YMBQGraph(mydata[,], barLabs = c("Col-0\n", "npr1-1\n", "npr4-4D\n", "npr1-1\nnpr4-4D"), ageCol = c("#EEF3E2", "#00798C"), exptID = "ARR-NPR-23-2-only",expCol = "#000000", graph = F, box = F, width = 7, height = 6)
+YMBQGraph(mydata[mydata$experiment == "ARR-NPR-23-2",], barLabs = c("Col-0\n", "npr1-1\n", "npr4-4D\n", "npr1-1\nnpr4-4D"), ageCol = c("#9609FF", "#FFFF00"), exptID = "ARR-NPR-23-2-only",expCol = "#000000", graph = F, box = F, width = 7, height = 6)
 ## deprecated
 mydata = read.csv(file = file.choose(),header=T)
 mydata= read.table(file= "clipboard",sep= "\t",header =T) ##This one copies a table from the clipboard

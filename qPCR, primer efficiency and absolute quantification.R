@@ -15,7 +15,7 @@ library(car)
 library(ggpattern)
 
 mydata= read.table(file= "clipboard",sep= "\t",header =T)
-mydata = mydata[,mydata[1,]!="BLANK" | is.na(mydata[1,]) == T] #Removes wells set as blank
+mydata = mydata[,mydata[1,]!="EMPTY" | is.na(mydata[1,]) == T ] #Removes wells set as blank
 samples = as.character(mydata[1,2:ncol(mydata)])
 mydata = mydata[2:nrow(mydata),]
 mydata = as.data.frame(lapply(mydata, as.numeric))
@@ -25,6 +25,7 @@ sample_group = paste(groups$gene, groups$type, sep = "_")
 
 #laptop directory
 setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-EARLY")
+setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR-NPR&PEN3\\exp-NPR qPCR data")
 
 #Desktop directory
 setwd("C:\\Users\\garrett\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR RNA-seq\\Exp-qRT-PCR\\Primer Efficiency test")

@@ -9,9 +9,12 @@ library(investr)
 library(tidyr)
 set.seed(31138)
 
-mydata= read.table(file= "clipboard",sep= "\t",header =T)
+setwd()
+
+mydata= read.table(file= "clipboard",sep= "\t",header =T) # First row is the column information where "time" is the rounded time of the measurement and well sample information is the column names for the respective data
 mydata$time = as.numeric(mydata$time)
 mydata[, 4:ncol(mydata)] = lapply(mydata[,4:ncol(mydata)], as.numeric)
+
 
 # Blank all the columns
 mydata[,4:ncol(mydata)] = lapply(mydata[,4:ncol(mydata)], function(x){ temp = x-rowMeans(mydata[,grepl("BLANK", colnames(mydata))])})
@@ -19,41 +22,6 @@ mydata = mydata[, !grepl("BLANK", colnames(mydata))] #remove blank columns
 sampleGroups = as.data.frame(str_split_fixed(as.character(colnames(mydata[,4:ncol(mydata)])), pattern = "_", 3))
 colnames(sampleGroups) = c("strain", "treatment", "BR")
 
-x = mydata$time
-y = mydata$EV_0_1
-fit <- nls(y ~ SSlogis(x, Asym, xmid, scal), trace = T, data = data.frame(x, y))
-
-fit <- nls(mydata$EV_0_1 ~ SSlogis(mydata$time, Asym, xmid, scal), data = data.frame(mydata$time, mydata$EV_0_1))
-model = lm(lm(y~I(x^3)+I(x^2)+x))
-#model = lm(YMM12_0_1 ~ time, data = mydata)
-# mydata <- mydata %>%
-#   dplyr::select( -matches('fit'), -matches('lwr'), -matches('upr') ) %>%
-#   cbind( predict(model, interval='conf'))
-ggplot(mydata, aes(x=time, y=EV_0_1)) +
-  geom_point() 
-
-+
-  geom_ribbon( aes(ymin=lwr, ymax=upr), alpha=.3 ) +
-  geom_line( aes(y=fit)) 
-
-## The below worked
-
-
-
-fit = nls(EV_0.5_1 ~ SSlogis(time, Asym, xmid, scal), data = mydata)
-fit = nls(EV_0.5_1 ~ SSfpl(time, A, B, xmid, scal), data = mydata)
-fit = nls(EV_0.5_1 ~ SSgompertz(time, Asym, b2, b3), data = mydata)
-
-plot(mydata$EV_0.5_1~mydata$time)
-lines(seq(0.5, 48, length.out = 100), predict(fit, newdata = data.frame(time = seq(0.5, 48, length.out = 100)))) # Predict just plops out the predicted y-axis points
-new.data = data.frame(time = seq(0.5, 48, length.out = 100))
-interval = as_tibble(predFit(fit, newdata = new.data, interval = "confidence", level = 0.95)) %>% mutate(time = new.data$time)
-
-
-p1 <- ggplot(mydata) +  geom_point(aes(x=time, y=EV_0.5_1),size=2, colour="black") + xlab("Time (h)") + ylab("Optical density (OD600)") 
-p1 + geom_line(data=interval, aes(x = time, y = fit ))+
-  geom_ribbon(data=interval, aes(x=time, ymin=lwr, ymax=upr), alpha=1, inherit.aes=F, fill="blue")+
-  theme_classic()
 # START FROM HERE NOW
 ### next steps are to convert below here is to figure out how to compare n number of nls fits and get p-values compared to wild-type control
 ## next steps, convert data to long format with a sample type column, group_by() sample type and make the models then.
@@ -62,15 +30,176 @@ sampleGroups = as.data.frame(str_split_fixed(as.character(mydata.long[,2]), patt
 colnames(sampleGroups) = c("strain", "treatment", "BR")
 mydata.long = cbind(mydata.long, sampleGroups)
 
-fit = nls(OD600 ~ SSfpl(time, A, B, xmid, scal), data = mydata.long[mydata.long$treatment == "0.5" & mydata.long$time%%2 ==0 ,] ) # reducing the timepoints (and outlying first bio rep really helped this model work better)
+## testing different types of curves
+testset = mydata.long[mydata.long$strain == "EV" & mydata.long$treatment =="UN",]
+time = mydata.long[mydata.long$strain == "EV" & mydata.long$treatment =="UN",]$time
+OD600 = mydata.long[mydata.long$strain == "EV" & mydata.long$treatment =="UN",]$OD600
+ggplot() +  geom_point(aes(x=time, y=OD600),size=2) + theme_classic()
+
+gompertz.NLL = function(a1, b1, c1, sigma) {
+  size.gomp <- a1*exp(-b1*exp(-c1*time))
+  -sum(dnorm(OD600, mean = size.gomp, sd = sigma, log=T))}
+
+## get the maximum likelihood by guessing the initial values
+### a1 = asymtote, b1 = x value at inflection point (~1/e up to the asymptote), c1 = rate of change, sigma= stdev
+gompertz.MLE.1 <- mle2(gompertz.NLL, start = list(a1 = 0.9,b1 = 5.5, c1 = 2, n0 = 0.025, sigma = 0.05), 
+                       method="L-BFGS-B", lower=0.00001)
+summary(gompertz.MLE.1)
+
+gompertz.MLE.2 <- mle2(gompertz.NLL, start = list(a1 = 0.98,b1 = 5.42, c1 = 0.085, sigma = 0.019),
+                       method="BFGS")
+
+summary(gompertz.MLE.2) #if the initial parameters were picked well summary(gompertz.MLE.1)==summary(gompertz.MLE.2)
+
+AIC(gompertz.MLE.2)
+ft.gomp <- coef(gompertz.MLE.2)
+ft.gomp
+
+prof.gomp <- profile(gompertz.MLE.2)
+confint(prof.gomp)
+plot(prof.gomp, 
+     conf = c(99, 95, 90, 80, 50)/100, absVal=T) # profiles with confidence intervals
+
+gompertz.NLLv2 = function(a1, b1, c1, n0, sigma) {
+  size.gomp <- a1*exp(-b1*exp(-c1*time))+ n0
+  -sum(dnorm(OD600, mean = size.gomp, sd = sigma, log=T))}
+
+gompertz.MLE.v2.1 <- mle2(gompertz.NLLv2, start = list(a1 = 0.9,b1 = 5.5, c1 = 2, n0 = 0.025, sigma = 0.05), 
+                       method="L-BFGS-B", lower=0.00001)
+summary(gompertz.MLE.v2.1)
+
+gompertz.MLE.v2.2 <- mle2(gompertz.NLLv2, start = list(a1 = 0.9063,b1 = 7.451, c1 = 0.09741,n0= 0.041, sigma = 0.0146),
+                       method="BFGS")
+
+summary(gompertz.MLE.v2.2) #if the initial parameters were picked well summary(gompertz.MLE.1)==summary(gompertz.MLE.2)
+
+AIC(gompertz.MLE.v2.2)
+ft.gomp.v2 <- coef(gompertz.MLE.v2.2)
+ft.gomp.v2
+
+prof.gomp.v2 <- profile(gompertz.MLE.v2.2)
+confint(prof.gomp.v2)
+plot(prof.gomp.v2, 
+     conf = c(99, 95, 90, 80, 50)/100, absVal=T) # profiles with confidence intervals
+
+## Trying a logistic curve
+### a = shifts the curve left and right, b controls the steepness of the curve
+logistic.NLL = function(a, b, sigma){
+  size.logis = exp(a+(b*time))/(1+exp(a+(b*time)))
+  -sum(dnorm(OD600, mean = size.logis, sd = sigma, log = T))
+}
+logistic.MLE.1 <- mle2(logistic.NLL, start = list(a = 3.09,b = 0.12, sigma = 0.029)
+                       , method="L-BFGS-B"
+                       #, lower=0.00001
+                       )
+summary(logistic.MLE.1)
+
+logistic.MLE.2 <- mle2(logistic.NLL, start = list(a = -3.09,b = 0.12, sigma = 0.029),
+                       method="BFGS")
+
+summary(logistic.MLE.2) #if the initial parameters were picked well summary(logistic.MLE.1)==summary(logistic.MLE.2)
+
+AIC(logistic.MLE.2)
+ft.logis <- coef(logistic.MLE.2)
+ft.logis
+
+prof.logis <- profile(logistic.MLE.2)
+confint(prof.logis)
+plot(prof.logis, 
+     conf = c(99, 95, 90, 80, 50)/100, absVal=T) # profiles with confidence intervals
+
+### K = population maximum, r= rate of grwoth, n0 = population at t0
+poplogis.NLL = function(K, r, n0, sigma){
+  size.poplogis = K/(1+(K/n0-1)*exp(-r*time))
+  -sum(dnorm(OD600, mean = size.poplogis, sd = sigma, log = T))
+}
+
+poplogis.MLE.1 <- mle2(poplogis.NLL, start = list(K = 1,r = 0.2, n0 = 0.025, sigma = 0.5)
+                       , method="L-BFGS-B"
+                       , lower=0.00001
+)
+summary(poplogis.MLE.1)
+
+poplogis.MLE.2 <- mle2(poplogis.NLL, start = list(K = 0.89, r= 0.15, n0 = 0.027, sigma = 0.01),
+                       method="BFGS")
+
+summary(poplogis.MLE.2) #if the initial parameters were picked well summary(poplogis.MLE.1)==summary(poplogis.MLE.2)
+
+AIC(poplogis.MLE.2)
+ft.poplogis <- coef(poplogis.MLE.2)
+ft.poplogis
+
+prof.poplogis <- profile(poplogis.MLE.2)
+confint(prof.poplogis)
+plot(prof.poplogis, 
+     conf = c(99, 95, 90, 80, 50)/100, absVal=T) # profiles with confidence intervals
+
+# Comparing between curve types
+plot(OD600 ~ time, pch = 20)
+curve(ft.gomp[1]*exp(-ft.gomp[2]*exp(-ft.gomp[3]*x)), 
+      from = 0, to = 48, add = T, col="red", lwd = 2)
+curve(ft.gomp2[1]*exp(-ft.gomp2[2]*exp(-ft.gomp2[3]*x))+ft.gomp[4], 
+      from = 0, to = 48, add = T, col="green", lwd = 2)
+curve(exp(ft.logis[1]+ft.logis[2]*x)/(1+exp(ft.logis[1]+ft.logis[2]*x)), 
+      from = 0, to = 48, add = T, col="blue", lwd = 2)
+curve(ft.poplogis[1]/(1+(ft.poplogis[1]/ft.poplogis[3]-1)*exp(-ft.poplogis[2]*x)), 
+      from = 0, to = 48, add = T, col="purple", lwd = 2)
+legend("bottomright", 
+       legend = c("Gompertz", "Gompertz with n0", "Logistic", "Population logistic"), 
+       col = c("red", "green", "blue", "purple"), lty = 1)
+
+AICctab(gompertz.MLE.2,gompertz.MLE.4, logistic.MLE.2, poplogis.MLE.2, nobs = 546 )
+BICtab(gompertz.MLE.2,gompertz.MLE.4, logistic.MLE.2, poplogis.MLE.2, nobs = 546)
+
+#### Examining the fit of the curves to the data the population logistic curve obviously fits the data the best.
+
+# Let's get to the science
+testset = mydata.long[mydata.long$strain == "EV",]
+testset = testset[testset$treatment =="0" | testset$treatment =="0.5", ]
+testset = testset[testset$treatment =="0", ]
+testset$treatment = factor(testset$treatment, levels = c("0", "0.5"))
+
+poplogis.NLL = function(K, r, n0, sigma){
+  size.poplogis = K/(1+(K/n0-1)*exp(-r*time))
+  -sum(dnorm(OD600, mean = size.poplogis, sd = sigma, log = T))
+}
+
+
+poplogis.null <- mle2(poplogis.NLL, start = list(K = 1,r = 0.2, n0 = 0.025, sigma = 0.5)
+                      , method="L-BFGS-B"
+                      , lower=0.00001, data = testset
+)
+poplogis.MLE.null <- mle2(poplogis.NLL, 
+                          start=list(K = 0.57, r = 0.13, n0 = 0.024, sigma = 0.142), 
+                          method="BFGS", data = testset)
+summary(poplogis.MLE.null)
+
+
+logLik(poplogis.MLE.null)
+ft.poplogis <- coef(poplogis.MLE.null)
+ft.poplogis
+
+prof.poplogis <- profile(poplogis.MLE.null)
+confint(prof.poplogis)
+plot(prof.poplogis,conf = c(99, 95, 90, 80, 50)/100, absVal=T) # profiles with confidence intervals
+
+
+with(testset,
+     plot(OD600 ~ time, col=c("purple", "blue")[treatment], pch=16, cex=1.6))
+# Females in purple, males in blue
+curve(ft.poplogis[1]/(1+(ft.poplogis[1]/ft.poplogis[3]-1)*exp(-ft.poplogis[2]*x)), 
+      from = 0, to = 48, add = T, col="red", lwd = 2)
+
+  legend(x=0, y=0.8, legend=c("0", "0.5"), pch=16,col=c("purple", "blue") )
+
+
+fit = nls(OD600 ~ SSfpl(time, A, B, xmid, scal), data = mydata.long[mydata.long$treatment == "gluc" & mydata.long$time%%2 ==0 ,] ) # reducing the timepoints (and outlying first bio rep really helped this model work better)
 fit = nls(OD600 ~ SSfpl(time, A, B, xmid, scal), data = mydata.long[mydata.long$treatment == "0",])
 #fit = nls(OD600 ~ SSlogis(time, Asym, xmid, scal), data = mydata.long[mydata.long$treatment == "0",]) # for a three parameter logistic curve but the four-parameter logistic had a better fit
 #fit = nls(OD600 ~ SSgompertz(time, Asym, b2, b3), data = mydata.long[mydata.long$treatment == "0",]) # tried gompertz and it had a worse fit but probably because I wasn't setting the start conditions.
 new.data = data.frame(time = seq(0, 48, length.out = 25))
 interval = as_tibble(predFit(fit, newdata = new.data, interval = "confidence", level = 0.99)) %>% mutate(time = new.data$time)
-p1 <- ggplot(mydata.long[mydata.long$treatment == "0"
-                         |mydata.long$treatment == "1"
-                         ,]) +  geom_point(aes(x=time, y=OD600),size=2, colour="black") + xlab("Time (h)") + ylab("Optical density (OD600)") 
+ p1 <-   ggplot(mydata.long[mydata.long$treatment == "UN",]) +  geom_point(aes(x=time, y=OD600, color = strain),size=2) + xlab("Time (h)") + ylab("Optical density (OD600)") 
 p1 + geom_line(data=interval, aes(x = time, y = fit ))+
   geom_ribbon(data=interval, aes(x=time, ymin=lwr, ymax=upr), alpha=0.5, inherit.aes=F, fill="blue")+
   theme_classic()
@@ -82,7 +211,7 @@ p1 + geom_line(data=new.data, aes(x = time, y = fit ))+
 ## Boot strap confidence intervals -> This is the way to go for CIs
 bootFun = function(newdata){
   start = coef(fit)
-  df = mydata.long[mydata.long$treatment == "0.5"& mydata.long$time%%2 ==0,]
+  df = mydata.long[mydata.long$treatment == "gluc"& mydata.long$time%%2 ==0,]
   dfboot <- df[sample(nrow(df), size = nrow(df), replace = TRUE),]
   bootfit = try(update(fit,
                        start = start,
@@ -96,8 +225,8 @@ bmat <- replicate(500, bootFun(new.data)) # run the boot strapping
 ### Make the line to graph on your plot
 new.data = data.frame(time = seq(0, 48, length.out = 25))
 new.data$fit = predict(fit, newdata = new.data)
-new.data$lwr <- apply(bmat, 1, quantile, 0.005, na.rm = TRUE) 
-new.data$upr <- apply(bmat, 1, quantile, 0.995, na.rm = TRUE) # upr and lwr together make a confidence interval with a probability width of 0.01
+new.data$lwr <- apply(bmat, 1, quantile, 0.01, na.rm = TRUE) 
+new.data$upr <- apply(bmat, 1, quantile, 0.99, na.rm = TRUE) # upr and lwr together make a confidence interval with a probability width of 0.01
 
 
 # summarizing and graphing

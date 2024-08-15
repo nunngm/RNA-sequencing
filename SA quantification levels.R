@@ -5,6 +5,7 @@ library(agricolae)
 library(tidyr)
 library(stats)
 library(investr)
+detach(package:plyr)
 
 ## From raw plate
 layout = unlist(read.table(file = "clipboard", sep = "\t", header = F))
@@ -24,36 +25,81 @@ curveData$lum = as.numeric(curveData$lum)
 # fit = nls( lum ~ SSlogis(SA, Asym, xmid, scal), curveData)
 # fit = nls(lum ~ SSgompertz(SA, Asym, b2, b3), data = curveData)
 
-### an exponential model worked best
- # curveData = curveData[curveData$SA != 0,] # For a log transformation there can be no 0 values
- # fit.exp = lm(log(SA) ~ lum, data = curveData) # the model
+## fitting a non-linear model
+polynomial.NLL = function(a, b, d, sigma){
+  ngSA.poly = a*(lum-d)^2 + b*(lum-d)
+  -sum(dnorm(SA, mean = ngSA.poly, sd = sigma, log = T))
+}
 
-### No actually a linear model was by far the best.
+curve.MLE <- mle2(polynomial.NLL, start = list(a=0.0005,b=0.5,d=mean(curveData[curveData$SA =="0",]$lum), sigma = 0.5)
+                      #, fixed = list(d=mean(curveData[curveData$SA =="0",]))
+                      , method="L-BFGS-B"
+                      , lower=0.00000001
+                      , data = curveData
+)
+
+summary(curve.MLE)
+
+curve.MLE.2 <- mle2(polynomial.NLL, start = list(a=0.00000136,b=0.0009,d=560, sigma = 3.25)
+                  , method="BFGS", data =curveData
+)
+
+summary(curve.MLE.2)
+
+ft.curve = coef(curve.MLE.2)
+ft.curve
+
+exp.NLL = function(a, b, sigma){
+  ngSA.exp = a^(lum-b)
+  -sum(dnorm(log(SA), mean = ngSA.exp, sd = sigma, log = T))
+}
+
+exp.MLE.1 <- mle2(exp.NLL, start = list(a=0.00001,b=560, sigma = 10)
+                  #, fixed = list(d=mean(curveData[curveData$SA =="0",]))
+                  , method="BFGS"
+                  , lower=0.00000001
+                  , data = curveData
+)
+
+summary(exp.MLE.1)
+
+curve.MLE.2 <- mle2(polynomial.NLL, start = list(a=0.00000136,b=0.0009,d=560, sigma = 3.25)
+                    , method="BFGS", data =curveData
+)
+
+summary(curve.MLE.2)
+
+ft.curve = coef(curve.MLE.2)
+ft.curve
+
+plot(SA~lum, data = curveData)
+curve(ft.curve[1]*(x-ft.curve[3])^2 + ft.curve[2]*(x-ft.curve[3]),0,7000,add = T, col = "red")
+curve(exp(ft.exp[2]*x+ft.exp[1]), 0, 7000, add=T, col= "blue")
+
+
+## an exponential model worked best sometimes
+curveData.exp = curveData[curveData$SA != 0,] # For a log transformation there can be no 0 values
+fit.exp = lm(log(SA) ~ lum, data = curveData.exp) # the model
+
+### No actually a linear model was by far the best sometimes.
 curveData = curveData[curveData$SA != 200,]
 fit = lm(SA ~ lum, data = curveData) #kill me, I spent so long learning non-linear fits just for a linear fit to be
 
 
 # summary(fit)
-# summary(fit.exp) # check the model parameters
+summary(fit.exp) # check the model parameters
 summary(fit)
 
 
-# new.data = data.frame(SA = seq(0, 200, length.out = 24))
-# predict(fit, curveData$lum)
-# interval = as_tibble(predFit(fit, newdata = new.data, interval = "confidence", level = 0.99)) %>% mutate(SA = new.data$SA)
-# interval$value = exp(interval$value)
-# p1 <- ggplot(curveData) +  geom_point(aes(x=SA, y=lum),size=2, colour="black") + xlab("Time (h)") + ylab("Optical density (OD600)") 
-# p1 + geom_line(data=interval, aes(x = SA, y = fit )) #+
-#   geom_ribbon(data=interval, aes(x=SA, ymin=lwr, ymax=upr), alpha=0.5, inherit.aes=F, fill="blue")+
-#   theme_classic()
 
 new.data = data.frame(lum = seq(0, max(curveData$lum), length.out = 22))
 interval = as_tibble(predFit(fit, newdata = new.data)) %>% mutate(lum = new.data$lum)
-# interval$value = exp(interval$value)
+interval$value = exp(interval$value)
 p1 <- ggplot(curveData) +  geom_point(aes(x=lum, y=SA),size=2, colour="black") + xlab("Luminescence") + ylab("ng SA") 
 p1 + geom_line(data=interval, aes(x = lum, y = value )) +  theme_classic()
 
 #fullData$predictedSA = exp(predict(fit.exp, newdata =  data.frame(lum = as.numeric(fullData$lum))))
+fullData$ngSA = exp(predict(fit, newdata =  data.frame(lum = as.numeric(fullData$lum))))
 fullData$ngSA = predict(fit, newdata =  data.frame(lum = as.numeric(fullData$lum)))
 sampleData = fullData[fullData$layout != "EMPTY" & !grepl("^{0,1}[0-9]{0,}.{0,1}[0-9]{1,}$", fullData$layout),]
 
@@ -273,7 +319,7 @@ yeastSAquant = function(data, ulBuffer = 250, mgfw = 25 , volume=20, mw = 138.12
   if(is.na(barLabs[1]) ==T){barLabs = selectTimes}
   if(length(graphType)>1){graphType ="line"}
   df = data[data$hpi %in% selectTimes, ] #Rows at the selected times
-  df$ngSA[df$ngSA<0] = 0 
+  #df$ngSA[df$ngSA<0] = 0 
   df$SAmgFW = df$ngSA/(volume*mgfw/ulBuffer)
   df$cellType = factor(df$cellType, levels = cellTypes)
   # df$experiment = as.factor(df$experiment)
@@ -353,7 +399,8 @@ yeastSAquant = function(data, ulBuffer = 250, mgfw = 25 , volume=20, mw = 138.12
   }
   
 }
-yeastSAquant(sampleData.24.1, graph = T, width = 7, height = 5, barLabs = c("UN", "1", "2"), selectTimes = c("0","1","2"), graphType = "bar", colours = c("#FFFFFF",  "#FF3853", "#00BBFF"))
+yeastSAquant(sampleData, graph = F, width = 7, height = 5, barLabs = c("UN", "1", "2"), selectTimes = c("0","1","2"), graphType = "bar", colours = c("#FFFFFF",  "#FF3853", "#00BBFF"))
+yeastSAquant(sampleData, graph = F, width = 7, height = 5, selectTimes = c("0","15","30", "60", "120"), graphType = "line", colours = c("#000000",  "#FF3853", "#00BBFF"))
 
 yeastSAquant.byTreatment = function(data, ulBuffer = 250, mgfw = 25 , volume=20, cellTypes = c("EV", "PEN3", "PDR12"), colours = c("#FFFFFF",  "#FF3853", "#00BBFF"),
                              lab.y = "", width = 5, height = 4, ylim = c(0,NA), barLabs = NA, selectTime = 2,

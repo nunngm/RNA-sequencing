@@ -7,17 +7,16 @@ library(stringr)
 library(emmeans)
 library(investr)
 library(tidyr)
+detach(package:plyr)
 set.seed(31138)
 
-setwd()
+setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR-NPR&PEN3\\exp-AMA\\graphs")
 
 mydata= read.table(file= "clipboard",sep= "\t",header =T) # First row is the column information where "time" is the rounded time of the measurement and well sample information is the column names for the respective data
-mydata$time = as.numeric(mydata$time)
-mydata[, 4:ncol(mydata)] = lapply(mydata[,4:ncol(mydata)], as.numeric)
-
+mydata[, 1:ncol(mydata)] = lapply(mydata[,1:ncol(mydata)], as.numeric)
 
 # Blank all the columns
-mydata[,4:ncol(mydata)] = lapply(mydata[,4:ncol(mydata)], function(x){ temp = x-rowMeans(mydata[,grepl("BLANK", colnames(mydata))])})
+mydata[,2:ncol(mydata)] = lapply(mydata[,2:ncol(mydata)], function(x){ temp = x-rowMeans(mydata[,grepl("BLANK", colnames(mydata))])})
 mydata = mydata[, !grepl("BLANK", colnames(mydata))] #remove blank columns
 sampleGroups = as.data.frame(str_split_fixed(as.character(colnames(mydata[,4:ncol(mydata)])), pattern = "_", 3))
 colnames(sampleGroups) = c("strain", "treatment", "BR")
@@ -25,7 +24,7 @@ colnames(sampleGroups) = c("strain", "treatment", "BR")
 # START FROM HERE NOW
 ### next steps are to convert below here is to figure out how to compare n number of nls fits and get p-values compared to wild-type control
 ## next steps, convert data to long format with a sample type column, group_by() sample type and make the models then.
-mydata.long = gather(mydata[,3:ncol(mydata)], key = "well", value = "OD600", -time) # converts to long form
+mydata.long = gather(mydata[,1:ncol(mydata)], key = "well", value = "OD600", -time) # converts to long form
 sampleGroups = as.data.frame(str_split_fixed(as.character(mydata.long[,2]), pattern = "_", 3))
 colnames(sampleGroups) = c("strain", "treatment", "BR")
 mydata.long = cbind(mydata.long, sampleGroups)
@@ -135,6 +134,8 @@ plot(prof.poplogis,
      conf = c(99, 95, 90, 80, 50)/100, absVal=T) # profiles with confidence intervals
 
 # Comparing between curve types
+
+## plotting the curves
 plot(OD600 ~ time, pch = 20)
 curve(ft.gomp[1]*exp(-ft.gomp[2]*exp(-ft.gomp[3]*x)), 
       from = 0, to = 48, add = T, col="red", lwd = 2)
@@ -148,12 +149,23 @@ legend("bottomright",
        legend = c("Gompertz", "Gompertz with n0", "Logistic", "Population logistic"), 
        col = c("red", "green", "blue", "purple"), lty = 1)
 
+## Looking at the log likelihood of each model
+logLik(gompertz.MLE.2)
+logLik(gompertz.MLE.4)
+logLik(logistic.MLE.2)
+logLik(poplogis.MLE.2)
+
+### in interpreting log likelihood results, the actual number doesn't really matter but can range from positive to negative infinity and describes how well your model fits the data it was modelled to.
+### Examining the relative log likelihoods of the different models, the model that best fits the data will be the model with the highest log likelihood.
+
 AICctab(gompertz.MLE.2,gompertz.MLE.4, logistic.MLE.2, poplogis.MLE.2, nobs = 546 )
-BICtab(gompertz.MLE.2,gompertz.MLE.4, logistic.MLE.2, poplogis.MLE.2, nobs = 546)
+BICtab(gompertz.MLE.2,gompertz.MLE.4, logistic.MLE.2, poplogis.MLE.2, nobs = nrow(testset))
 
 #### Examining the fit of the curves to the data the population logistic curve obviously fits the data the best.
 
 # Let's get to the science
+
+## Begin with building a model of the null hypothesis, that growth is unaffected by SA concentration
 testset = mydata.long[mydata.long$strain == "EV",]
 testset = testset[testset$treatment =="0" | testset$treatment =="0.5", ]
 testset = testset[testset$treatment =="0", ]
@@ -190,8 +202,59 @@ with(testset,
 curve(ft.poplogis[1]/(1+(ft.poplogis[1]/ft.poplogis[3]-1)*exp(-ft.poplogis[2]*x)), 
       from = 0, to = 48, add = T, col="red", lwd = 2)
 
-  legend(x=0, y=0.8, legend=c("0", "0.5"), pch=16,col=c("purple", "blue") )
+legend(x=0, y=0.8, legend=c("0", "0.5"), pch=16,col=c("purple", "blue") )
 
+## let's beging by using mle to test the hypothesis that only the final carrying capacity (K) is affected by SA treatment
+
+
+poplogis.MLE.K = mle2(OD600 ~ dnorm(K/(1+(K/n0-1)*exp(-r*time)), sd = sigma),
+                      start = list(K = ft.poplogis[1], r = ft.poplogis[2], n0 = ft.poplogis[3], sigma = ft.poplogis[4]),
+                      parameters = list(K ~ treatment), method = "BFGS", data = testset
+                      )
+summary(poplogis.MLE.K)
+ft.poplogis.K = coef(poplogis.MLE.K)
+
+#How does the model compare to the null model
+logLik(poplogis.MLE.K)
+logLik(poplogis.MLE.null)
+
+anova(poplogis.MLE.K, poplogis.MLE.null)
+AICtab(poplogis.MLE.K,poplogis.MLE.null, delta=T, base=T, sort=T, weights=T)
+BICtab(gompertz.MLE.a,gompertz.MLE.null, delta=T, base=T, sort=T, weights=T, nobs=nrow(hyena.growth))
+
+with(testset,
+     plot(OD600 ~ time, col=c("purple", "blue")[treatment], pch=16, cex=1))
+curve(ft.poplogis[1]/(1+(ft.poplogis[1]/ft.poplogis[3]-1)*exp(-ft.poplogis[2]*x)), 
+      from = 0, to = 48, add = T, col="red", lwd = 2)
+curve(ft.poplogis.K[1]/(1+(ft.poplogis.K[1]/ft.poplogis.K[4]-1)*exp(-ft.poplogis.K[3]*x)), 
+      from = 0, to = 48, add = T, col="green", lwd = 2)
+curve((ft.poplogis.K[1]+ ft.poplogis.K[2])/(1+((ft.poplogis.K[1]+ft.poplogis.K[2])/ft.poplogis.K[4]-1)*exp(-ft.poplogis.K[3]*x)), 
+      from = 0, to = 48, add = T, col="orange", lwd = 2)
+
+### There is a difference based on carry capacity but does SA also effect the rate of growth of yeast cells
+
+
+poplogis.MLE.full <- mle2(OD600 ~ dnorm(K/(1+(K/n0-1)*exp(-r*time)), sd = sigma),
+                                           start = list(K = 0.8, r = 0.14, n0 = 0.025, sigma = 0.012),
+                                           parameters = list(K ~ treatment, r ~ treatment), method = "BFGS", data = testset
+                                    )
+  
+summary(poplogis.MLE.full) ## it looks like growth rate, r is also affected by treatment
+
+prof.full <- profile(poplogis.MLE.full)
+plot(prof.full)
+ft.poplogis.full = coef(poplogis.MLE.full)
+
+  mle2(BodyLength ~ dnorm(a*exp(-b*exp(-c*Age)), sd=sigma), 
+                          start=list(a=97,b=0.89, c=0.11, sigma=5.57), 
+                          parameters=list(a ~ Sex, b ~ Sex, c~Sex), method="BFGS", data=hyena.growth)
+
+
+# taking the data in long format and graphing it
+
+YAMA
+# Below this line is not working garbage
+# ---------------------------------------------------------------------------
 
 fit = nls(OD600 ~ SSfpl(time, A, B, xmid, scal), data = mydata.long[mydata.long$treatment == "gluc" & mydata.long$time%%2 ==0 ,] ) # reducing the timepoints (and outlying first bio rep really helped this model work better)
 fit = nls(OD600 ~ SSfpl(time, A, B, xmid, scal), data = mydata.long[mydata.long$treatment == "0",])
@@ -209,155 +272,186 @@ p1 + geom_line(data=new.data, aes(x = time, y = fit ))+
   theme_classic()
 
 ## Boot strap confidence intervals -> This is the way to go for CIs
-bootFun = function(newdata){
-  start = coef(fit)
-  df = mydata.long[mydata.long$treatment == "gluc"& mydata.long$time%%2 ==0,]
-  dfboot <- df[sample(nrow(df), size = nrow(df), replace = TRUE),]
-  bootfit = try(update(fit,
-                       start = start,
-                       data = dfboot),
-                silent = F)
-  if(inherits(bootfit, "try-error")) return(rep(NA, nrow(newdata)))
-  predict(bootfit, newdata)
+
+## lets graph it
+AMAgrowthCurve = function(df, # a data frame in long format
+                          treatment, #treatments you are interested
+                          strain, # strains you are interested in
+                          colours = NA, # the specified colours, can be a list
+                          interval = 2, 
+                          width = 5, ylim = c(0,NA), height = 5, graph = F){ # graphing information
+  if (length(colours) != length(strain)){
+    warning("You did not include the correct number of colours, resorting to default colour scheme")
+    colours = 1:length(strain)
+  }
+  
+  df = df[df$treatment %in% treatment,]
+  df$treatment = factor(df$treatment, levels = treatment)
+  df = df[df$strain %in% strain,]
+  df$strain = factor(df$strain, levels = strain)
+  df$strainTreat = paste0(df$strain, df$treatment)
+  df = df[df$time %% 2 ==0,]
+  df.summary = df %>% group_by(strain, treatment, time,strainTreat) %>% summarise(growth = mean(OD600), stdev = sd(OD600))
+  p = ggplot(data = df.summary, aes(x = time, y = growth, group = strainTreat)) + geom_line(aes(linetype = treatment, colour = strain),size = 1)+
+    geom_errorbar(aes(ymin=growth-stdev, ymax=growth+stdev, colour = strain), width=.1, size = 1) +
+    geom_point(aes(colour = strain, shape =treatment),size = 4, fill = "#FFFFFF") +
+    xlab("Time (h)") + ylab(bquote('Optical density (600 nm)')) +
+    scale_y_continuous(limits = ylim, expand = c(0,0)) +
+    scale_x_continuous( breaks = seq(0,max(df$time, na.rm = T), by = 12)) +
+    # scale_fill_manual(values = colours) +
+    scale_color_manual(values = colours) +
+    scale_shape_manual(values = c(16,21)) + 
+    # scale_linetype_manual(values = c(1,2,2)) +
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank(),
+          axis.line = element_line(colour = "black", size=1),
+          axis.title.x=element_blank(),
+          #axis.text.x=element_blank()),
+          axis.ticks=element_line(colour = "black", size =1),
+          axis.ticks.length.x = unit(5, "points"),
+          axis.ticks.length.y = unit(5,"points") ,
+          axis.title.y = element_text(size = 20),
+          axis.text = element_text(colour = "black", size=15),
+          axis.text.x = element_text(vjust = -0.25),
+          legend.position = "none",
+          plot.margin = unit(c(20,0,10,0), "points")
+    )
+  if(graph ==T){
+    exptID = readline(prompt = "Enter the experiment ID: ")
+    ggsave(file = paste("AMAgrowthCurve",paste(treatment, collapse = "and"), paste0(exptID, ".svg"), sep = "_"), plot = p, width = width, height = height)
+  } else{
+    p
+  }
 }
 
-bmat <- replicate(500, bootFun(new.data)) # run the boot strapping
-### Make the line to graph on your plot
-new.data = data.frame(time = seq(0, 48, length.out = 25))
-new.data$fit = predict(fit, newdata = new.data)
-new.data$lwr <- apply(bmat, 1, quantile, 0.01, na.rm = TRUE) 
-new.data$upr <- apply(bmat, 1, quantile, 0.99, na.rm = TRUE) # upr and lwr together make a confidence interval with a probability width of 0.01
+AMAgrowthCurve(pdr.24.3, treatment = c("0", "gluc"), ylim = c(0,1), 
+               strain = c("EV", "PEN3", "PDR12"),width = 6, height = 4, colours = c("#000000", "#FF3853", "#00BBFF"), graph = T)
+AMAgrowthCurve(mydata.long, treatment = "0.5", ylim = c(0,1), strain = c("EV", "PEN3", "PDR12"),width = 7, height = 5, colours = c("#000000", "#FF3853", "#00BBFF"), graph = T)
 
 
-# summarizing and graphing
-## summarize the data in long format
-dataSummary = function(data, varName, keyVariables = c("strain", "treatment", "time"), control = "0", var_interest, interval = 2){ # a simple function which just pulls out the mean optical density for each condition at the indicated intervals relative to the selected treatment
-
+controlSummary = function(data, varName, keyVariables = c("strain", "treatment", "time"), control){
+  
   summary_func = function(x, col){
     c(mean = mean(x[[col]], na.rm=TRUE),
       sd = sd(x[[col]], na.rm=TRUE))
-  } # collects the means
+  }
   
-  data = subset(data, time%%interval==0) # only pick the times at the intervals of interest
   data_sum =ddply(data, keyVariables, .fun=summary_func,
-                  varName) # summarize the data based on the key variables defined above
-  data_sum = rename(data_sum, c("mean" = varName)) # rename the mean column to the original varibale's name
-  data_sum = data_sum[data_sum$treatment == control|data_sum$treatment == var_interest,] # pick out only treatments of interest (e.g. the control and one other)
+                  varName)
+  data_sum = rename(data_sum, c("mean" = varName))
+  data_sum = data_sum[data_sum$treatment == control,]
   
   return(data_sum)
 }
-data.sub = dataSummary(mydata.long, varName = "OD600", var_interest = "0.5")
 
-ggplot(data.sub, aes(x = time, y = OD600, color = strain, shape = treatment))+geom_line() + geom_point() + geom_errorbar(aes(ymin = OD600 - sd, ymax = OD600 + sd), width = .2, position= position_dodge(0.05))
 
-## quick bar graph at a specific time point
-ggplot(data.sub[data.sub$time ==48,], aes(x=strain, y=OD600, fill = treatment)) + 
-  geom_bar(stat="identity", color="black", 
-           position=position_dodge()) +
-  geom_errorbar(aes(ymin=OD600-sd, ymax=OD600+sd), width=.2,
-                position=position_dodge(.9)) 
-
-# ARETe
-# this is from above you need take the "well" column and split into a strain column and a SA conc column
-sampleGroups = as.data.frame(str_split_fixed(as.character(colnames(mydata[,4:ncol(mydata)])), pattern = "_", 3)) # this is from above you need take the "well" column and split into a strain column and a SA conc column
-
-sum.bar = function(data, varName, keyVariables = c("strain", "treatment", "time"), test, control, select_time, relative = F){
-  controlSummary = function(data, varName, keyVariables = c("strain", "treatment", "time"), control){
-    
-    summary_func = function(x, col){
-      c(mean = mean(x[[col]], na.rm=TRUE),
-        sd = sd(x[[col]], na.rm=TRUE))
-    }
-    
-    data_sum =ddply(data, keyVariables, .fun=summary_func,
-                    varName)
-    data_sum = rename(data_sum, c("mean" = varName))
-    data_sum = data_sum[data_sum$treatment == control,]
-    
-    return(data_sum)
+DoseResponseCurve = function(df, # a data frame in long format
+                          time, # the time point at which growth will be measured
+                          control = "0", # the reference treatment to which everything will be set at 100%
+                          strain, # strains you are interested in
+                          colours = NA, # the specified colours, can be a list
+                          width = 5, ylim = c(0,NA), height = 5, graph = F){ # graphing information
+  if (length(colours) != length(strain)){
+    colours = 1:length(strain)
   }
-  
-  ref = controlSummary(mydata.long, varName = "OD600", control = "0")
-  
-  data = data[data$time == select_time, ] # select the specific time point to be used
-  #data = data[data$treatment == control|data$treatment == test,] # select specific tretaments
-  
-  if (relative ==T){
-    data[data$strain == "EV", ]$OD600 = (data[data$strain == "EV", ]$OD600 - ref[ref$strain =="EV" &ref$time==0,]$OD600)/(ref[ref$strain == "EV"& ref$time == select_time,]$OD600- ref[ref$strain =="EV" &ref$time==0,]$OD600) * 100
+  library(plyr)
+  ref = controlSummary(df, varName = "OD600", control = control)
+  df = df[df$time == time,]
+  df = df[df$strain %in% strain,]
+  df$strain = factor(df$strain, levels = strain)
+  df = df[grepl("^{0,1}[0-9]{0,}.{0,1}[0-9]{1,}$", df$treatment),] # only numeric treatments as the x-axis will be continuous
+  #df$treatment = as.numeric(df$treatment)
+  #data[data$strain == "EV", ]$OD600 = (data[data$strain == "EV", ]$OD600 - ref[ref$strain =="EV" &ref$time==0,]$OD600)/(ref[ref$strain == "EV"& ref$time == select_time,]$OD600- ref[ref$strain =="EV" &ref$time==0,]$OD600) * 100
+  for(i in levels(as.factor(df$strain))){
+    df[df$strain == i, ]$OD600 = (df[df$strain == i, ]$OD600 - ref[ref$strain ==i &ref$time==0,]$OD600)/(ref[ref$strain == i& ref$time == time,]$OD600- ref[ref$strain ==i &ref$time==0,]$OD600) * 100
     
-    for(i in levels(as.factor(data$strain))){
-      data[data$strain == i, ]$OD600 = (data[data$strain == i, ]$OD600 - ref[ref$strain ==i &ref$time==0,]$OD600)/(ref[ref$strain == i& ref$time == select_time,]$OD600- ref[ref$strain ==i &ref$time==0,]$OD600) * 100
-      
-    }
-    xlab = "Relative growth (%)"
   }
-  ### Subset by treatment
+  detach(package:plyr)
   
-  ### plot the findings (under construction)
-  p = ggplot(data, aes(x=strain, y=OD600, fill = treatment )) + geom_jitter( color= expCol,
-                       size=2, alpha=0.5, position = position_jitterdodge(dodge.width = 0.75)) + coord_cartesian(ylim = ylim) +    theme(
-                         legend.position="none",
-                         plot.title = element_text(size=11)
-                       ) + 
-    scale_y_continuous(breaks=c(4, 5, 6, 7, 8), 
-                       labels = expression(10^4, 10^5, 10^6, 10^7, 10^8),
-                       expand = c(0, 0.05))   + scale_x_discrete(labels = barLabs) +
-    scale_fill_manual(values = ageCol) +
-    xlab("Genotype") + ylab(bquote('Bacterial level (cfu leaf disc'^-1*')')) + 
-    theme(panel.grid.major = element_blank(), 
+  df.summary = df %>% group_by(strain, treatment) %>% summarise(growth = mean(OD600), stdev = sd(OD600))
+  p = ggplot(data = df.summary, aes(x = treatment, y = growth, group = strain, color = strain)) + geom_line( size = 1)+
+    geom_errorbar(aes(ymin=growth-stdev, ymax=growth+stdev), width=.1, size = 1) +
+    geom_point(size = 4) +
+    xlab("Dose (mM)") + ylab("Relative growth (% of control)") +
+    #scale_x_continuous(limits = c(-2,0.5)) +
+    scale_y_continuous(limits = ylim, expand = c(0,0)) +
+    #scale_fill_manual(values = colours) +
+    scale_color_manual(values = colours) +
+    # scale_linetype_manual(values = c(1,2,2)) +
+    theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
-          panel.background = element_blank(), 
+          panel.background = element_blank(),
           axis.line = element_line(colour = "black", size=1),
-          axis.title.x=element_text(size=15),
-          axis.text.x=element_text(face = faces),
-          axis.ticks.y=element_line(colour = "black", size =1),
-          axis.ticks.length.y = unit(5, "points"),
+          axis.title.x=element_text(size = 20),
+          #axis.text.x=element_blank()),
+          axis.ticks=element_line(colour = "black", size =1),
           axis.ticks.length.x = unit(5, "points"),
-          axis.ticks.x=element_line(colour = "black", size = 1),
-          #ggh4x.axis.ticks.length.minor = rel(5),
-          axis.ticks.length = unit(5,"points") ,
-          axis.title.y = element_text(size=15),
-          axis.text = element_text(color = "black", size=15)
+          axis.ticks.length.y = unit(5,"points") ,
+          axis.title.y = element_text(size = 20),
+          axis.text = element_text(colour = "black", size=15),
+          axis.text.x = element_text(vjust = -0.25),
+          legend.position = "none",
+          plot.margin = unit(c(20,0,10,0), "points")
     )
-}
-
-toGraph = t(mydata[, 4:ncol(mydata)])
-colnames(toGraph) = mydata$time
-
-SAQuantGraph = function(data, genotypeCol = c("#378717","#FFFF00", "#6DFDFD"), ylim = c(4,8), expCol = NA, graph = F, width = 5, height = 4, exptID = "temp", box = F){
-}
-SAQuantGraph = function(data,genotypes = c("Col-0", "ald1-T2", "fmo1-1"), colours = c("#378717","#FFFF00", "#6DFDFD"), selectTimes = c("UN", "12", "18", "24"), 
-                        barLabs = c("Untreated", "12 hpi", "18 hpi", "24 hpi"), ylim = c(0,NA), width = 5, height = 4, SA = c("inter", "intra"),
-                        graph = F){
-  if (length(SA) == 2){
-    SA = "inter"
-  }
-  if (SA == "inter"){
-    selectColumn = "intercellular"
-    lab.y = bquote('Intercellular SA (ng ml IWF'^-1*')')
+  if(graph ==T){
+    exptID = readline(prompt = "Enter the experiment ID: ")
+    ggsave(file = paste("DoseResponseCurve", paste0(time, "h"), paste0(exptID, ".svg"), sep = "_"), plot = p, width = width, height = height)
   } else{
-    selectColumn = "intracellular"
-    lab.y = bquote('Intracellular SA (ng gfw'^-1*')')
+    p
   }
-  df = data[data$hpi %in% selectTimes, ] #Rows at the selected times
-  df$genotype = factor(df$genotype, levels = genotypes)
-  df$experiment = as.factor(df$experiment)
-  df$hpi = factor(df$hpi, levels = selectTimes)
-  df$hpi = factor(df$hpi, levels = selectTimes)
-  df$intercellular = as.numeric(df$intercellular)
-  df$intracellular = as.numeric(df$intracellular)
-  #take full data and pare down to just the required treatment and untreated
+}
+
+DoseResponseCurve(pdr.24.2, control = "UN",strain = c("EV", "PEN3", "PDR12"), time ="48", colours = c("#000000", "#FF3853", "#00BBFF"), ylim = c(-5,110),graph = F,height = 5, width = 7)
+DoseResponseCurve(mydata.long, control = "0",strain = c("EV", "PEN3", "PDR12"), time ="", colours = c("#000000", "#FF3853", "#00BBFF"), ylim = c(-5,110),graph = T,height = 5, width = 7)
+
+# Basically the same graph as the dose response curve but a bar graph with the points and you can pick 
+relGrowthBar = function(df, # a data frame in long format
+                             time, # the time point at which growth will be measured
+                             control = "0", # the reference treatment to which everything will be set at 100%
+                             strain, # strains you are interested in
+                             treatment = NA,
+                             colours = NA, # the specified colours, can be a list
+                             width = 7, ylim = c(0,NA), barLabs = NA, height = 5, graph = F){ # graphing information
+  if (length(colours) != length(strain)){
+    colours = 1:length(strain)
+  }
+  library(plyr)
+  ref = controlSummary(df, varName = "OD600", control = control)
+  df = df[df$time == time,]
+  df = df[grepl("^{0,1}[0-9]{0,}.{0,1}[0-9]{1,}$", df$treatment),] # only numeric treatments as the x-axis will be continuous
+  if(is.na(treatment[1]) == F){
+    df = df[df$treatment %in% treatment,]
+    df$treatment = factor(df$treatment, levels = treatment)
+  } else{
+    df$treatment = factor(df$treatment)
+  }
+  df = df[df$strain %in% strain, ]
+  df$strain = factor(df$strain, levels = strain)
+
+  #df$treatment = as.numeric(df$treatment)
+  #data[data$strain == "EV", ]$OD600 = (data[data$strain == "EV", ]$OD600 - ref[ref$strain =="EV" &ref$time==0,]$OD600)/(ref[ref$strain == "EV"& ref$time == select_time,]$OD600- ref[ref$strain =="EV" &ref$time==0,]$OD600) * 100
+  for(i in levels(as.factor(df$strain))){
+    df[df$strain == i, ]$OD600 = (df[df$strain == i, ]$OD600 - ref[ref$strain ==i &ref$time==0,]$OD600)/(ref[ref$strain == i& ref$time == time,]$OD600- ref[ref$strain ==i &ref$time==0,]$OD600) * 100
+
+  }
+  detach(package:plyr)
   
-  p = ggplot(df, aes(x = hpi, y = get(selectColumn), fill = genotype, group = genotype)) + 
-    stat_summary(aes(group = genotype), colour = "#000000", fun = mean, geom = 'bar', width = 0.6, size = 1, position = position_dodge(width = 0.8)) + 
-    stat_summary( aes(y = get(selectColumn), group = genotype), fun = mean,
-                  fun.min = function(x) {pmax(mean(x) - sd(x), 0, na.rm = T)}, 
+  if(length(levels(df$treatment)) != length(barLabs)){
+    barLabs = levels(df$treatment)
+  }
+  
+  p=ggplot(df, aes(x = treatment, y = OD600, fill = strain, group = strain)) + 
+    stat_summary(aes(group = strain), colour = "#000000", fun = mean, geom = 'bar', width = 0.6, size = 1, position = position_dodge(width = 0.8))+ 
+    stat_summary( aes(y = OD600, group = strain), fun = mean,
+                  fun.min = function(x) {
+                    pmax(mean(x) - sd(x), 0, na.rm = T)}, 
                   fun.max = function(x) {mean(x) + sd(x)}, 
                   geom = "errorbar", lty =1 , size =0.75, width = 0.25, position = position_dodge(width = 0.8)) +
-    geom_jitter( alpha = 0.4, size = 2, position = position_jitterdodge(jitter.width = 0.25, dodge.width = 0.8)) +
-    xlab("") +   scale_y_continuous(limits = ylim, expand = c(0,0)) + ylab(lab.y) +  scale_x_discrete(labels = barLabs) +
+    geom_jitter( alpha = 0.4, size = 2, position = position_jitterdodge(jitter.width = 0, dodge.width = 0.8)) +
+    xlab("") +   scale_y_continuous(limits = ylim, expand = c(0,0))+
+    ylab(lab.y) +  scale_x_discrete(labels = barLabs) +
     scale_fill_manual(values = colours) +
-    #ylim(NA,3.2)  +
     theme(panel.grid.major = element_blank(), 
           panel.grid.minor = element_blank(),
           panel.background = element_blank(), 
@@ -367,81 +461,18 @@ SAQuantGraph = function(data,genotypes = c("Col-0", "ald1-T2", "fmo1-1"), colour
           axis.ticks=element_line(colour = "black", size =1),
           axis.ticks.length.x = unit(5, "points"),
           axis.ticks.length.y = unit(5,"points") ,
-          axis.title.y = element_blank(),
+          axis.title.y = element_text(size = 20),
           axis.text = element_text(colour = "black", size=15),
           axis.text.x = element_text(vjust = -0.25),
           legend.position = "none",
           plot.margin = unit(c(20,0,10,0), "points")
     )
-  #Full anova
-  data$genohpi = paste(data$genotype,data$hpi, sep = "_")
-  anovaModel = aov(get(selectColumn) ~ genohpi, data = data)
-  print(HSD.test(anovaModel, alpha=0.05, "genohpi", console=F)$groups)
   
   if(graph ==T){
     exptID = readline(prompt = "Enter the experiment ID: ")
-    ggsave(file = paste(selectColumn, "SAQuant", paste0(exptID, ".svg"), sep = "_"), plot = p, width = width, height = height)
+    ggsave(file = paste("RelGrowthBar", paste0(time, "h"), paste0(exptID, ".svg"), sep = "_"), plot = p, width = width, height = height)
   } else{
     p
   }
 }
-
-## Working on Pst strains
-
-
-mydata= read.table(file= "clipboard",sep= "\t",header =T)
-df = mydata
-df$genotype = factor(df$genotype, levels = c("untreated","mock","Pst", "Pst ΔalgU mucAB",  "Pst ΔalgU mucAB ΔalgD"))
-
-df$experiment = as.factor(df$experiment)
-df$hpi = factor(df$hpi, levels = c("6", "12", "24"))
-df$intercellular = as.numeric(df$intercellular)
-df$genohpi = paste(df$genotype,df$hpi, sep = "_")
-df$genohpi = factor(df$genohpi, levels = c("Pst_6","Pst_12", "Pst_24", "Pst ΔalgU mucAB_6", "Pst ΔalgU mucAB_12", "Pst ΔalgU mucAB_24", "Pst ΔalgU mucAB ΔalgD_6", "Pst ΔalgU mucAB ΔalgD_12", "Pst ΔalgU mucAB ΔalgD_24"))
-
-df$genohpi = paste(df$genotype,df$treatment,df$hpi, df$post, sep = "_")
-df$genohpi = factor(df$genohpi, levels = c("Col-0_mock_6_hpt", "Col-0_mock_12_hpt", "Col-0_mock_24_hpt", "Col-0_mock_6_hpi", "Col-0_mock_12_hpi", "Col-0_mock_24_hpi", "Col-0_flg22_6_hpt", "Col-0_flg22_12_hpt", "Col-0_flg22_24_hpt", "Col-0_flg22_6_hpi", "Col-0_flg22_12_hpi", "Col-0_flg22_24_hpi",
-                                           "fls2_mock_6_hpt", "fls2_mock_12_hpt", "fls2_mock_24_hpt", "fls2_mock_6_hpi", "fls2_mock_12_hpi", "fls2_mock_24_hpi", "fls2_flg22_6_hpt", "fls2_flg22_12_hpt", "fls2_flg22_24_hpt", "fls2_flg22_6_hpi", "fls2_flg22_12_hpi", "fls2_flg22_24_hpi"
-                                           ))
-
-p = ggplot(df, aes(x = genohpi, y = intercellular, fill= "white")) + 
-  stat_summary( colour = "#000000", fun = mean, geom = 'bar', width = 0.6, size = 1, position = position_dodge(width = 0.8))  +
-  stat_summary( fun = mean,
-                fun.min = function(x) {pmax(mean(x) - sd(x), 0, na.rm = T)}, 
-                fun.max = function(x) {mean(x) + sd(x)}, 
-                geom = "errorbar", lty =1 , size =0.75, width = 0.25, position = position_dodge(width = 0.8))  +
-  #geom_jitter( alpha = 0.4, size = 2 ,width = 0, position = position_jitterdodge(jitter.width = 0, dodge.width = 0.8))+
-  #) +
-  xlab("") + scale_y_continuous(limits = c(0,2500), expand = c(0,0)) + ylab("") +  scale_x_discrete(labels = rep(c("6", "12", "24"), times = 8))  +
-  scale_fill_manual(values = "white") +
-  #ylim(NA,3.2)  +
-  theme(panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        panel.background = element_blank(), 
-        axis.line = element_line(colour = "black", size=1),
-        axis.title.x=element_blank(),
-        #axis.text.x=element_blank()),
-        axis.ticks=element_line(colour = "black", size =1),
-        axis.ticks.length.x = unit(5, "points"),
-        axis.ticks.length.y = unit(5,"points") ,
-        axis.title.y = element_text(size=15),
-        axis.text = element_text(colour = "black", size=18),
-        axis.text.x = element_text(vjust = -0.25),
-        legend.position = "none",
-        plot.margin = unit(c(20,0,10,0), "points")
-  )
-p
-mydata$combined = paste(mydata$age, mydata$genotype, mydata$hpi, sep = "_")
-anovaModel = aov(log2(intracellular+1) ~ combined, data = temp)
-print(HSD.test(anovaModel, alpha=0.05, "combined", console=F)$groups)
-
-ggsave(file = "PTI-IWF-20-3.svg", plot = p, width = 16, height = 8)
-
-
-setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-PTI&Biofilms paper\\Exp-Triple and Quad\\IWF SA levels")
-setwd("C:\\Users\\garre\\OneDrive\\Documents\\Cameron Lab- McMaster University\\Data\\Data-ARR-NPR&PEN3\\exp-PEN3 SA levels\\graphs")
-SAQuantGraph(mydata, genotypes = c("Pst", "Pst ΔalgU mucAB",  "Pst ΔalgU mucAB ΔalgD"), selectTimes = c("6", "12", "24"), barLabs = c("6 hpi", "12 hpi", "24 hpi"), SA = "inter")
-SAQuantGraph(temp, genotypes = c("Col-0", "pen3-4", "pdr12-3", "p3p12"), colours = c("#FFFFFF", "#00BBFF", "#FF3853", "#5D2169"), selectTimes = c("UN", "24"), barLabs = c("Untreated", "24 hpi"), SA = "inter", ylim = c(0,2500), graph = T, height = 6, width = 8)
-
-#Double mutant colours
-colours = c("#FFFFFF", "#00BBFF", "#FF3853", "#5D2169")
+relGrowthBar(pdr.24.3, treatment = c("0", "0.1", "0.2", "0.5", "1", "2", "5"), time = "24", strain = c("EV", "PEN3", "PDR12"),  colours = c("#FFFFFF", "#FF3853", "#00BBFF"), ylim = c(0,110),graph = T,height = 5, width = 7)

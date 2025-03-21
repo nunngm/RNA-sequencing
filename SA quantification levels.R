@@ -83,7 +83,7 @@ fit.exp = lm(log(SA) ~ lum, data = curveData.exp) # the model
 
 ### No actually a linear model was by far the best sometimes.
 curveData = curveData[curveData$SA != 200,]
-fit = lm(SA ~ lum, data = curveData) #kill me, I spent so long learning non-linear fits just for a linear fit to be
+fit = lm(SA ~ lum, data = curveData) #kill me, I spent so long learning non-linear fits just for a linear fit to be best
 
 
 # summary(fit)
